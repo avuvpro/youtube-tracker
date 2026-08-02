@@ -38,8 +38,34 @@ def send_telegram(text):
 
 
 def get_channel_id_by_url(url):
+  headers = {
+      "User-Agent": (
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML,"
+          " like Gecko) Chrome/120.0.0.0 Safari/537.36"
+      ),
+      "Accept-Language": "en-US,en;q=0.9",
+  }
+  try:
+    # Завантажуємо сторінку каналу напряму, щоб гарантовано взяти правильний ID
+    response = requests.get(url, headers=headers, timeout=10)
+    if response.status_code == 200:
+      html = response.text
+      match = re.search(r'"channelId"\s*:\s*"(UC[\w-]+)"', html)
+      if match:
+        ch_id = match.group(1)
+        api_url = f"https://www.googleapis.com/youtube/v3/channels?part=contentDetails,snippet&id={ch_id}&key={YOUTUBE_API_KEY}"
+        res = requests.get(api_url).json()
+        items = res.get("items", [])
+        if items:
+          return (
+              ch_id,
+              items[0]["contentDetails"]["relatedPlaylists"]["uploads"],
+          )
+  except Exception as e:
+    print(f"Помилка при зчитуванні сторінки {url}: {e}")
+
+  # Резервний варіант через API, якщо раптом сторінка не відповіла
   clean_url = url.split("?")[0]
-  # Витягуємо хендл і прибираємо зайві крапки чи слеші на кінці (наприклад, @gasbo.)
   handle = clean_url.strip("/").split("@")[-1].rstrip(".")
   api_url = f"https://www.googleapis.com/youtube/v3/channels?part=id,contentDetails&forHandle={handle}&key={YOUTUBE_API_KEY}"
   res = requests.get(api_url).json()
