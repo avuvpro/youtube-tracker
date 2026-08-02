@@ -206,11 +206,9 @@ def main():
       if vid_id in seen_ids:
         continue
 
-      # 1. ПОКРАЩЕНА НОРМА: Усічена медіана (Trimmed Median) з останніх 15 відео
       other_videos = [v for j, v in enumerate(videos) if j != i][:15]
       past_views = sorted([v["views"] for v in other_videos])
 
-      # Відкидаємо 2 найбільші і 2 найменші значення для чистоти бази (якщо є достатньо відео)
       if len(past_views) >= 9:
         clean_past = past_views[2:-2]
       elif len(past_views) >= 5:
@@ -232,7 +230,6 @@ def main():
 
       multiplier = lat_views / median_views if median_views > 0 else 1
 
-      # Розрахунок швидкості набору (переглядів на годину)
       diff_hours = max((now - pub_time).total_seconds() / 3600, 0.5)
       views_per_hour = int(lat_views / diff_hours)
 
@@ -242,7 +239,6 @@ def main():
           f" {views_per_hour:,} п/год"
       )
 
-      # 2. ЖОРСТКИЙ КРИТЕРІЙ: множник >= 2.5 ТА перегляди >= 15,000
       is_zalyot = False
       if lat_views >= 15000 and multiplier >= 2.5:
         print(f"    🔥 ЦЕ ЗАЛЬОТ! Додаємо.")
@@ -251,8 +247,6 @@ def main():
       if is_zalyot:
         percent_diff = int((multiplier - 1) * 100)
         formatted_date, relative_time = format_time_info(pub_str)
-
-        # Пріоритетний рейтинг для сортування (враховує як відсоток, так і швидкість набору)
         priority_score = percent_diff + int(views_per_hour * 0.2)
 
         item = {
@@ -262,11 +256,12 @@ def main():
             "views": lat_views,
             "norm": median_views,
             "percent": percent_diff,
+            "views_per_hour": views_per_hour,  # Зберігаємо швидкість
             "score": priority_score,
             "url": f"https://www.youtube.com/watch?v={vid_id}",
             "thumbnail": f"https://img.youtube.com/vi/{vid_id}/hqdefault.jpg",
             "time": formatted_date,
-            "relative_time": relative_time,
+            "relative_time": relative_time,  # Зберігаємо відносний час (3 дні тому)
             "published_at": pub_str,
         }
         new_zalyoty.append(item)
@@ -297,7 +292,6 @@ def main():
       except:
         pass
 
-  # Сортуємо за пріоритетним score (ракетні свіжі хіти тепер завжди на самому верху)
   valid_data.sort(key=lambda x: x.get("score", x.get("percent", 0)), reverse=True)
 
   with open(DATA_FILE, "w", encoding="utf-8") as f:
