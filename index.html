@@ -3,51 +3,103 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>YouTube Gaming Zalyoty Tracker</title>
+    <title>Моніторинг Зальотів YouTube</title>
     <style>
-        body { background-color: #0f0f0f; color: #fff; font-family: Arial, sans-serif; margin: 0; padding: 20px; }
-        h1 { text-align: center; color: #ff4444; }
-        .container { max-width: 800px; margin: 0 auto; }
-        .card { background: #1f1f1f; border-radius: 10px; padding: 15px; margin-bottom: 15px; display: flex; gap: 15px; align-items: center; border-left: 5px solid #ff4444; }
-        .card img { width: 160px; height: 90px; object-fit: cover; border-radius: 6px; }
-        .info { flex-grow: 1; }
-        .channel { font-size: 14px; color: #aaa; margin-bottom: 5px; }
-        .title { font-size: 16px; font-weight: bold; color: #fff; text-decoration: none; display: block; margin-bottom: 8px; }
-        .title:hover { color: #3ea6ff; }
-        .stats { font-size: 14px; color: #2ba640; font-weight: bold; }
+        body {
+            background-color: #121212;
+            color: #fff;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            color: #ff4757;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .card {
+            background: #1e1e1e;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            border-left: 4px solid #ff4757;
+        }
+        .card img {
+            width: 120px;
+            height: 68px;
+            border-radius: 4px;
+            object-fit: cover;
+        }
+        .info h3 {
+            margin: 0 0 5px 0;
+            font-size: 18px;
+        }
+        .info h3 a {
+            color: #fff;
+            text-decoration: none;
+        }
+        .info h3 a:hover {
+            text-decoration: underline;
+        }
+        .info p {
+            margin: 3px 0;
+            color: #bbb;
+            font-size: 14px;
+        }
+        .badge {
+            color: #2ed573;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>🔥 Моніторинг Зальотів YouTube</h1>
-        <div id="feed">Завантаження даних...</div>
+        <div id="content">Завантаження даних...</div>
     </div>
 
     <script>
         fetch('data.json')
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Файл не знайдено');
+                }
+                return response.json();
+            })
             .then(data => {
-                const feed = document.getElementById('feed');
-                if (data.length === 0) {
-                    feed.innerHTML = '<p style="text-align:center; color:#777;">Поки що немає зафіксованих зальотів.</p>';
+                const container = document.getElementById('content');
+                if (!data || data.length === 0) {
+                    container.innerHTML = '<p style="text-align:center; color:#888;">Поки що немає даних про зальоти.</p>';
                     return;
                 }
-                feed.innerHTML = '';
+                
+                let html = '';
                 data.forEach(item => {
-                    feed.innerHTML += `
+                    html += `
                         <div class="card">
-                            <img src="${item.thumbnail}" alt="thumb">
+                            <img src="${item.thumbnail}" alt="Thumbnail">
                             <div class="info">
-                                <div class="channel">${item.channel} • ${item.time}</div>
-                                <a href="${item.url}" class="title" target="_blank">${item.title}</a>
-                                <div class="stats">👀 ${item.views.toLocaleString()} переглядів (+${item.percent}% від норми)</div>
+                                <h3><a href="${item.url}" target="_blank">${item.title}</a></h3>
+                                <p>👤 <b>Автор:</b> ${item.channel}</p>
+                                <p>👁 <b>Перегляди:</b> ${item.views.toLocaleString()} (Норма: ${item.norm.toLocaleString()})</p>
+                                <p>📈 Відхилення: <span class="badge">+${item.percent}%</span></p>
+                                <p style="font-size: 12px; color: #777;">🕒 ${item.time}</p>
                             </div>
                         </div>
                     `;
                 });
+                container.innerHTML = html;
             })
-            .catch(err => {
-                document.getElementById('feed').innerHTML = '<p style="text-align:center; color:#777;">Дані з'являться після першого запуску скрипта.</p>';
+            .catch(error => {
+                console.error('Помилка завантаження:', error);
+                document.getElementById('content').innerHTML = '<p style="text-align:center; color:#ff4757;">Помилка завантаження даних або файл ще не створено.</p>';
             });
     </script>
 </body>
