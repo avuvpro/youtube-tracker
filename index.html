@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Gaming Zalyoty Tracker</title>
+    <style>
+        body { background-color: #0f0f0f; color: #fff; font-family: Arial, sans-serif; margin: 0; padding: 20px; }
+        h1 { text-align: center; color: #ff4444; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .card { background: #1f1f1f; border-radius: 10px; padding: 15px; margin-bottom: 15px; display: flex; gap: 15px; align-items: center; border-left: 5px solid #ff4444; }
+        .card img { width: 160px; height: 90px; object-fit: cover; border-radius: 6px; }
+        .info { flex-grow: 1; }
+        .channel { font-size: 14px; color: #aaa; margin-bottom: 5px; }
+        .title { font-size: 16px; font-weight: bold; color: #fff; text-decoration: none; display: block; margin-bottom: 8px; }
+        .title:hover { color: #3ea6ff; }
+        .stats { font-size: 14px; color: #2ba640; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔥 Моніторинг Зальотів YouTube</h1>
+        <div id="feed">Завантаження даних...</div>
+    </div>
+
+    <script>
+        fetch('data.json')
+            .then(response => response.json())
+            .then(data => {
+                const feed = document.getElementById('feed');
+                if (data.length === 0) {
+                    feed.innerHTML = '<p style="text-align:center; color:#777;">Поки що немає зафіксованих зальотів.</p>';
+                    return;
+                }
+                feed.innerHTML = '';
+                data.forEach(item => {
+                    feed.innerHTML += `
+                        <div class="card">
+                            <img src="${item.thumbnail}" alt="thumb">
+                            <div class="info">
+                                <div class="channel">${item.channel} • ${item.time}</div>
+                                <a href="${item.url}" class="title" target="_blank">${item.title}</a>
+                                <div class="stats">👀 ${item.views.toLocaleString()} переглядів (+${item.percent}% від норми)</div>
+                            </div>
+                        </div>
+                    `;
+                });
+            })
+            .catch(err => {
+                document.getElementById('feed').innerHTML = '<p style="text-align:center; color:#777;">Дані з'являться після першого запуску скрипта.</p>';
+            });
+    </script>
+</body>
+</html>
