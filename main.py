@@ -39,7 +39,8 @@ def send_telegram(text):
 
 def get_channel_id_by_url(url):
   clean_url = url.split("?")[0]
-  handle = clean_url.strip("/").split("@")[-1]
+  # Витягуємо хендл і прибираємо зайві крапки чи слеші на кінці (наприклад, @gasbo.)
+  handle = clean_url.strip("/").split("@")[-1].rstrip(".")
   api_url = f"https://www.googleapis.com/youtube/v3/channels?part=id,contentDetails&forHandle={handle}&key={YOUTUBE_API_KEY}"
   res = requests.get(api_url).json()
   items = res.get("items", [])
@@ -101,7 +102,6 @@ def format_time_info(published_at_str):
 
 
 def get_video_stats(playlist_id):
-  # Збільшено ліміт до 50, щоб захоплювати глибшу історію каналу крізь Shorts
   playlist_url = f"https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails&playlistId={playlist_id}&maxResults=50&key={YOUTUBE_API_KEY}"
   res = requests.get(playlist_url).json()
 
@@ -169,7 +169,7 @@ def main():
     print(f"\nПеревірка каналу: {ch_url}")
     ch_id, uploads_id = get_channel_id_by_url(ch_url)
     if not uploads_id:
-      print(f"  ❌ Не вдалося знайти канал")
+      print(f"  ❌ Не вдалося знайти канал за посиланням")
       continue
 
     videos = get_video_stats(uploads_id)
@@ -217,7 +217,6 @@ def main():
           f" {median_views:,} | Множник: {multiplier:.2f}x"
       )
 
-      # Знижено поріг назад до 1.5x, щоб підхоплювати гарні зальоти
       is_zalyot = False
       if lat_views >= (median_views * 1.5) or lat_views >= 30000:
         if multiplier >= 1.5:
