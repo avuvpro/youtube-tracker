@@ -1,1 +1,34 @@
-[]
+[
+  {
+    "id": "ZQ89ukcIJ_U",
+    "title": "SARAAH (I Heard It Too) vs All Bosses Minecraft Battle",
+    "channel": "Gasbo",
+    "views": 479862,
+    "norm": 29251,
+    "percent": 1540,
+    "views_per_hour": 6186,
+    "score": 2777,
+    "url": "https://www.youtube.com/watch?v=ZQ89ukcIJ_U",
+    "thumbnail": "https://img.youtube.com/vi/ZQ89ukcIJ_U/hqdefault.jpg",
+    "time": "30 липня, 12:39",
+    "relative_time": "3 дні тому",
+    "published_at": "2026-07-30T12:39:30Z",
+    "telegram_message_id": 17
+  },
+  {
+    "id": "gaHzFPRDrfs",
+    "title": "Long Horse vs The Most Powerful Minecraft Bosses | Minecraft Mob Battle",
+    "channel": "Namink",
+    "views": 17891,
+    "norm": 5340,
+    "percent": 235,
+    "views_per_hour": 302,
+    "score": 295,
+    "url": "https://www.youtube.com/watch?v=gaHzFPRDrfs",
+    "thumbnail": "https://img.youtube.com/vi/gaHzFPRDrfs/hqdefault.jpg",
+    "time": "31 липня, 07:00",
+    "relative_time": "2 дні тому",
+    "published_at": "2026-07-31T07:00:16Z",
+    "telegram_message_id": 18
+  }
+]
