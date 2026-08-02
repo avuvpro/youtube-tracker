@@ -38,43 +38,26 @@ def send_telegram(text):
 
 
 def get_channel_id_by_url(url):
-  headers = {
-      "User-Agent": (
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML,"
-          " like Gecko) Chrome/120.0.0.0 Safari/537.36"
-      ),
-      "Accept-Language": "en-US,en;q=0.9",
-  }
-  try:
-    # Завантажуємо сторінку каналу напряму, щоб гарантовано взяти правильний ID
-    response = requests.get(url, headers=headers, timeout=10)
-    if response.status_code == 200:
-      html = response.text
-      match = re.search(r'"channelId"\s*:\s*"(UC[\w-]+)"', html)
-      if match:
-        ch_id = match.group(1)
-        api_url = f"https://www.googleapis.com/youtube/v3/channels?part=contentDetails,snippet&id={ch_id}&key={YOUTUBE_API_KEY}"
-        res = requests.get(api_url).json()
-        items = res.get("items", [])
-        if items:
-          return (
-              ch_id,
-              items[0]["contentDetails"]["relatedPlaylists"]["uploads"],
-          )
-  except Exception as e:
-    print(f"Помилка при зчитуванні сторінки {url}: {e}")
-
-  # Резервний варіант через API, якщо раптом сторінка не відповіла
   clean_url = url.split("?")[0]
   handle = clean_url.strip("/").split("@")[-1].rstrip(".")
-  api_url = f"https://www.googleapis.com/youtube/v3/channels?part=id,contentDetails&forHandle={handle}&key={YOUTUBE_API_KEY}"
-  res = requests.get(api_url).json()
-  items = res.get("items", [])
-  if items:
-    return (
-        items[0]["id"],
-        items[0]["contentDetails"]["relatedPlaylists"]["uploads"],
-    )
+
+  search_url = f"https://www.googleapis.com/youtube/v3/search?part=snippet&type=channel&q={handle}&maxResults=1&key={YOUTUBE_API_KEY}"
+  try:
+    res = requests.get(search_url).json()
+    items = res.get("items", [])
+    if items:
+      ch_id = items[0]["snippet"]["channelId"]
+      api_url = f"https://www.googleapis.com/youtube/v3/channels?part=contentDetails,snippet&id={ch_id}&key={YOUTUBE_API_KEY}"
+      channel_res = requests.get(api_url).json()
+      channel_items = channel_res.get("items", [])
+      if channel_items:
+        return (
+            ch_id,
+            channel_items[0]["contentDetails"]["relatedPlaylists"]["uploads"],
+        )
+  except Exception as e:
+    print(f"Помилка пошуку каналу {handle} через API: {e}")
+
   return None, None
 
 
@@ -223,35 +206,54 @@ def main():
       if vid_id in seen_ids:
         continue
 
-      other_videos = [v for j, v in enumerate(videos) if j != i]
+      # 1. ПОКРАЩЕНА НОРМА: Усічена медіана (Trimmed Median) з останніх 15 відео
+      other_videos = [v for j, v in enumerate(videos) if j != i][:15]
       past_views = sorted([v["views"] for v in other_videos])
 
-      if len(past_views) >= 6:
+      # Відкидаємо 2 найбільші і 2 найменші значення для чистоти бази (якщо є достатньо відео)
+      if len(past_views) >= 9:
         clean_past = past_views[2:-2]
+      elif len(past_views) >= 5:
+        clean_past = past_views[1:-1]
       else:
         clean_past = past_views
 
-      median_views = (
-          clean_past[len(clean_past) // 2] if clean_past else 1000
-      )
+      if clean_past:
+        n = len(clean_past)
+        if n % 2 == 1:
+          median_views = clean_past[n // 2]
+        else:
+          median_views = (clean_past[n // 2 - 1] + clean_past[n // 2]) // 2
+      else:
+        median_views = 1000
+
       if median_views == 0:
         median_views = 100
 
       multiplier = lat_views / median_views if median_views > 0 else 1
+
+      # Розрахунок швидкості набору (переглядів на годину)
+      diff_hours = max((now - pub_time).total_seconds() / 3600, 0.5)
+      views_per_hour = int(lat_views / diff_hours)
+
       print(
-          f"    🔍 {title[:35]}... | Перегляди: {lat_views:,} | Норма:"
-          f" {median_views:,} | Множник: {multiplier:.2f}x"
+          f"    🔍 {title[:30]}... | Перегляди: {lat_views:,} | Норма:"
+          f" {median_views:,} | Множник: {multiplier:.2f}x | Швидкість:"
+          f" {views_per_hour:,} п/год"
       )
 
+      # 2. ЖОРСТКИЙ КРИТЕРІЙ: множник >= 2.5 ТА перегляди >= 15,000
       is_zalyot = False
-      if lat_views >= (median_views * 1.5) or lat_views >= 30000:
-        if multiplier >= 1.5:
-          print(f"    🔥 ЦЕ ЗАЛЬОТ! Додаємо.")
-          is_zalyot = True
+      if lat_views >= 15000 and multiplier >= 2.5:
+        print(f"    🔥 ЦЕ ЗАЛЬОТ! Додаємо.")
+        is_zalyot = True
 
       if is_zalyot:
         percent_diff = int((multiplier - 1) * 100)
         formatted_date, relative_time = format_time_info(pub_str)
+
+        # Пріоритетний рейтинг для сортування (враховує як відсоток, так і швидкість набору)
+        priority_score = percent_diff + int(views_per_hour * 0.2)
 
         item = {
             "id": vid_id,
@@ -260,6 +262,7 @@ def main():
             "views": lat_views,
             "norm": median_views,
             "percent": percent_diff,
+            "score": priority_score,
             "url": f"https://www.youtube.com/watch?v={vid_id}",
             "thumbnail": f"https://img.youtube.com/vi/{vid_id}/hqdefault.jpg",
             "time": formatted_date,
@@ -276,6 +279,7 @@ def main():
             f"👁 *Перегляди:* {lat_views:,}\n"
             f"📈 *Норма (медіана):* {median_views:,}\n"
             f"📊 *Відхилення:* `+{percent_diff}%`\n"
+            f"⚡️ *Швидкість:* `{views_per_hour:,} п/год`\n"
             f"⏱ *Викладено:* {formatted_date} ({relative_time})"
         )
         send_telegram(msg)
@@ -293,7 +297,8 @@ def main():
       except:
         pass
 
-  valid_data.sort(key=lambda x: x.get("percent", 0), reverse=True)
+  # Сортуємо за пріоритетним score (ракетні свіжі хіти тепер завжди на самому верху)
+  valid_data.sort(key=lambda x: x.get("score", x.get("percent", 0)), reverse=True)
 
   with open(DATA_FILE, "w", encoding="utf-8") as f:
     json.dump(valid_data, f, ensure_ascii=False, indent=2)
