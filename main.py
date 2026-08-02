@@ -122,15 +122,12 @@ def main():
     if vid_id in seen_ids:
       continue
 
-    is_zalyot = False
-    multiplier = lat_views / median_views
-
-    if lat_views >= (median_views * 1.5) or lat_views >= 50000:
-      if multiplier >= 1.5:
-        is_zalyot = True
+    # ТЕСТОВИЙ РЕЖИМ: примусово фіксуємо зальот
+    is_zalyot = True
+    multiplier = lat_views / median_views if median_views > 0 else 1
 
     if is_zalyot:
-      percent_diff = int((multiplier - 1) * 100)
+      percent_diff = int((multiplier - 1) * 100) if median_views > 0 else 0
       item = {
           "id": vid_id,
           "title": latest_video["title"],
@@ -145,7 +142,7 @@ def main():
       new_zalyoty.append(item)
 
       msg = (
-          f"🔥 *ХІТ / ЗАЛЬОТ У ГЕЙМІНГІ!*\n\n"
+          f"🔥 *ТЕСТОВЕ СПОВІЩЕННЯ!*\n\n"
           f"👤 *Автор:* {channel_name}\n"
           f"🎬 *Ролик:* [{latest_video['title']}]({item['url']})\n"
           f"👁 *Перегляди:* {lat_views:,}\n"
