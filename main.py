@@ -28,13 +28,44 @@ MONTHS_UA = {
 
 def send_telegram(text):
   if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
-    return
+    return None
   url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
   payload = {"chat_id": TELEGRAM_CHAT_ID, "text": text, "parse_mode": "Markdown"}
   try:
-    requests.post(url, json=payload)
+    res = requests.post(url, json=payload).json()
+    if res.get("ok"):
+      return res["result"]["message_id"]
   except Exception as e:
     print(f"Помилка відправки в Telegram: {e}")
+  return None
+
+
+def edit_telegram_message(message_id, text):
+  if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID or not message_id:
+    return
+  url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/editMessageText"
+  payload = {
+      "chat_id": TELEGRAM_CHAT_ID,
+      "message_id": message_id,
+      "text": text,
+      "parse_mode": "Markdown",
+  }
+  try:
+    requests.post(url, json=payload)
+  except Exception as e:
+    print(f"Помилка редагування в Telegram: {e}")
+
+
+def delete_telegram_message(message_id):
+  if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID or not message_id:
+    return
+  url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/deleteMessage"
+  payload = {"chat_id": TELEGRAM_CHAT_ID, "message_id": message_id}
+  try:
+    requests.post(url, json=payload)
+    print(f"🗑 Видалено застаріле повідомлення з Telegram (ID: {message_id})")
+  except Exception as e:
+    print(f"Помилка видалення повідомлення в Telegram: {e}")
 
 
 def get_channel_id_by_url(url):
@@ -161,7 +192,65 @@ def main():
       except:
         detected = []
 
-  seen_ids = {d["id"] for d in detected}
+  now = datetime.now(timezone.utc)
+  seven_days_ago = now - timedelta(days=7)
+
+  updated_detected = []
+  for item in detected:
+    pub_str = item.get("published_at")
+    if pub_str:
+      try:
+        pub_time = datetime.fromisoformat(pub_str.replace("Z", "+00:00"))
+        # Якщо відео новіше або рівно 7 днів — оновлюємо і залишаємо
+        if pub_time >= seven_days_ago:
+          vid_id = item["id"]
+          stats_url = f"https://www.googleapis.com/youtube/v3/videos?part=statistics&id={vid_id}&key={YOUTUBE_API_KEY}"
+          stats_res = requests.get(stats_url).json()
+          items = stats_res.get("items", [])
+          if items:
+            current_views = int(
+                items[0]["statistics"].get("viewCount", item["views"])
+            )
+            item["views"] = current_views
+
+            diff_hours = max((now - pub_time).total_seconds() / 3600, 0.5)
+            views_per_hour = int(current_views / diff_hours)
+            item["views_per_hour"] = views_per_hour
+
+            median_views = item["norm"]
+            multiplier = current_views / median_views if median_views > 0 else 1
+            percent_diff = int((multiplier - 1) * 100)
+            item["percent"] = percent_diff
+            item["score"] = percent_diff + int(views_per_hour * 0.2)
+
+            formatted_date, relative_time = format_time_info(pub_str)
+            item["time"] = formatted_date
+            item["relative_time"] = relative_time
+
+            msg_id = item.get("telegram_message_id")
+            if msg_id:
+              msg_text = (
+                  f"🔥 *АКТУАЛЬНИЙ ЗАЛЬОТ!*\n\n"
+                  f"👤 *Автор:* {item['channel']}\n"
+                  f"🎬 *Ролик:* [{item['title']}]({item['url']})\n"
+                  f"👁 *Перегляди:* {current_views:,}\n"
+                  f"📈 *Норма (медіана):* {median_views:,}\n"
+                  f"📊 *Відхилення:* `+{percent_diff}%`\n"
+                  f"⚡️ *Швидкість:* `{views_per_hour:,} п/год`\n"
+                  f"⏱ *Викладено:* {formatted_date} ({relative_time})"
+              )
+              edit_telegram_message(msg_id, msg_text)
+
+          updated_detected.append(item)
+        else:
+          # Якщо минуло більше 7 днів — видаляємо повідомлення з телеграму (з сайту воно пропаде само)
+          msg_id = item.get("telegram_message_id")
+          if msg_id:
+            delete_telegram_message(msg_id)
+      except Exception as e:
+        print(f"Помилка обробки ролика: {e}")
+
+  seen_ids = {d["id"] for d in updated_detected}
 
   if not os.path.exists("channels.txt"):
     print("Файл channels.txt не знайдено")
@@ -171,8 +260,6 @@ def main():
     channels = [line.strip() for line in f if line.strip()]
 
   new_zalyoty = []
-  now = datetime.now(timezone.utc)
-  seven_days_ago = now - timedelta(days=7)
 
   for ch_url in channels:
     print(f"\nПеревірка каналу: {ch_url}")
@@ -233,12 +320,6 @@ def main():
       diff_hours = max((now - pub_time).total_seconds() / 3600, 0.5)
       views_per_hour = int(lat_views / diff_hours)
 
-      print(
-          f"    🔍 {title[:30]}... | Перегляди: {lat_views:,} | Норма:"
-          f" {median_views:,} | Множник: {multiplier:.2f}x | Швидкість:"
-          f" {views_per_hour:,} п/год"
-      )
-
       is_zalyot = False
       if lat_views >= 15000 and multiplier >= 2.5:
         print(f"    🔥 ЦЕ ЗАЛЬОТ! Додаємо.")
@@ -249,6 +330,18 @@ def main():
         formatted_date, relative_time = format_time_info(pub_str)
         priority_score = percent_diff + int(views_per_hour * 0.2)
 
+        msg = (
+            f"🔥 *ЗНАЙДЕНО ЗАЛЬОТ!*\n\n"
+            f"👤 *Автор:* {channel_name}\n"
+            f"🎬 *Ролик:* [{title}](https://www.youtube.com/watch?v={vid_id})\n"
+            f"👁 *Перегляди:* {lat_views:,}\n"
+            f"📈 *Норма (медіана):* {median_views:,}\n"
+            f"📊 *Відхилення:* `+{percent_diff}%`\n"
+            f"⚡️ *Швидкість:* `{views_per_hour:,} п/год`\n"
+            f"⏱ *Викладено:* {formatted_date} ({relative_time})"
+        )
+        msg_id = send_telegram(msg)
+
         item = {
             "id": vid_id,
             "title": title,
@@ -256,48 +349,25 @@ def main():
             "views": lat_views,
             "norm": median_views,
             "percent": percent_diff,
-            "views_per_hour": views_per_hour,  # Зберігаємо швидкість
+            "views_per_hour": views_per_hour,
             "score": priority_score,
             "url": f"https://www.youtube.com/watch?v={vid_id}",
             "thumbnail": f"https://img.youtube.com/vi/{vid_id}/hqdefault.jpg",
             "time": formatted_date,
-            "relative_time": relative_time,  # Зберігаємо відносний час (3 дні тому)
+            "relative_time": relative_time,
             "published_at": pub_str,
+            "telegram_message_id": msg_id,
         }
         new_zalyoty.append(item)
         seen_ids.add(vid_id)
 
-        msg = (
-            f"🔥 *ЗНАЙДЕНО ЗАЛЬОТ!*\n\n"
-            f"👤 *Автор:* {channel_name}\n"
-            f"🎬 *Ролик:* [{title}]({item['url']})\n"
-            f"👁 *Перегляди:* {lat_views:,}\n"
-            f"📈 *Норма (медіана):* {median_views:,}\n"
-            f"📊 *Відхилення:* `+{percent_diff}%`\n"
-            f"⚡️ *Швидкість:* `{views_per_hour:,} п/год`\n"
-            f"⏱ *Викладено:* {formatted_date} ({relative_time})"
-        )
-        send_telegram(msg)
-
-  all_data = new_zalyoty + detected
-
-  valid_data = []
-  for item in all_data:
-    pub_str = item.get("published_at")
-    if pub_str:
-      try:
-        pub_time = datetime.fromisoformat(pub_str.replace("Z", "+00:00"))
-        if pub_time >= seven_days_ago:
-          valid_data.append(item)
-      except:
-        pass
-
-  valid_data.sort(key=lambda x: x.get("score", x.get("percent", 0)), reverse=True)
+  all_data = new_zalyoty + updated_detected
+  all_data.sort(key=lambda x: x.get("score", x.get("percent", 0)), reverse=True)
 
   with open(DATA_FILE, "w", encoding="utf-8") as f:
-    json.dump(valid_data, f, ensure_ascii=False, indent=2)
+    json.dump(all_data, f, ensure_ascii=False, indent=2)
 
-  print(f"\n✨ Успішно оновлено. Всього зальотів у базі: {len(valid_data)}")
+  print(f"\n✨ Успішно оновлено. Всього зальотів у базі: {len(all_data)}")
 
 
 if __name__ == "__main__":
