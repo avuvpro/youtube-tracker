@@ -165,18 +165,20 @@ def main():
   seven_days_ago = now - timedelta(days=7)
 
   for ch_url in channels:
+    print(f"\nПеревірка каналу: {ch_url}")
     ch_id, uploads_id = get_channel_id_by_url(ch_url)
     if not uploads_id:
-      print(f"Не вдалося знайти канал: {ch_url}")
+      print(f"  ❌ Не вдалося знайти канал")
       continue
 
     videos = get_video_stats(uploads_id)
     if len(videos) < 5:
+      print(f"  ❌ Занадто мало відео ({len(videos)})")
       continue
 
     channel_name = videos[0].get("channel", "Unknown")
+    print(f"  ✅ Канал: {channel_name} (знайдено відео: {len(videos)})")
 
-    # Перевіряємо КОЖНЕ відео за останні 7 днів
     for i, candidate_video in enumerate(videos):
       pub_str = candidate_video["published_at"]
       try:
@@ -184,17 +186,19 @@ def main():
       except:
         continue
 
-      # Якщо відео старіше за 7 днів, зупиняємо перевірку цього каналу
       if pub_time < seven_days_ago:
-        break
+        break  # Старіші за 7 днів пропускаємо
 
       vid_id = candidate_video["id"]
+      lat_views = candidate_video["views"]
+      title = candidate_video["title"]
+
       if vid_id in seen_ids:
+        print(
+            f"    ⏭ Пропущено (вже є в базі): {title} ({lat_views:,} переглядів)"
+        )
         continue
 
-      lat_views = candidate_video["views"]
-
-      # Рахуємо медіану по решті відео каналу
       other_videos = [v for j, v in enumerate(videos) if j != i]
       past_views = sorted([v["views"] for v in other_videos])
 
@@ -209,12 +213,21 @@ def main():
       if median_views == 0:
         median_views = 100
 
-      is_zalyot = False
       multiplier = lat_views / median_views if median_views > 0 else 1
+      print(
+          f"    🔍 {title[:40]}... | Перегляди: {lat_views:,} | Норма:"
+          f" {median_views:,} | Множник: {multiplier:.2f}x"
+      )
 
-      if lat_views >= (median_views * 1.5) or lat_views >= 50000:
-        if multiplier >= 1.5:
+      # Множник знижено до 2.0, щоб точно піймати великі зальоти
+      if lat_views >= (median_views * 2.0) or lat_views >= 30000:
+        if multiplier >= 2.0:
+          print(f"    🔥 ЦЕ ЗАЛЬОТ! Додаємо.")
           is_zalyot = True
+        else:
+          is_zalyot = False
+      else:
+        is_zalyot = False
 
       if is_zalyot:
         percent_diff = int((multiplier - 1) * 100)
@@ -222,7 +235,7 @@ def main():
 
         item = {
             "id": vid_id,
-            "title": candidate_video["title"],
+            "title": title,
             "channel": channel_name,
             "views": lat_views,
             "norm": median_views,
@@ -239,7 +252,7 @@ def main():
         msg = (
             f"🔥 *ЗНАЙДЕНО ЗАЛЬОТ!*\n\n"
             f"👤 *Автор:* {channel_name}\n"
-            f"🎬 *Ролик:* [{candidate_video['title']}]({item['url']})\n"
+            f"🎬 *Ролик:* [{title}]({item['url']})\n"
             f"👁 *Перегляди:* {lat_views:,}\n"
             f"📈 *Норма (медіана):* {median_views:,}\n"
             f"📊 *Відхилення:* `+{percent_diff}%`\n"
@@ -247,7 +260,6 @@ def main():
         )
         send_telegram(msg)
 
-  # Об'єднуємо та фільтруємо весь список за 7 днів
   all_data = new_zalyoty + detected
 
   valid_data = []
@@ -261,12 +273,12 @@ def main():
       except:
         pass
 
+  valid_data.sort(key=lambda x: x.get("percent", 0), reverse=True)
+
   with open(DATA_FILE, "w", encoding="utf-8") as f:
     json.dump(valid_data, f, ensure_ascii=False, indent=2)
 
-  print(
-      f"Успішно оновлено. Актуальних зальотів за 7 днів: {len(valid_data)}"
-  )
+  print(f"\n✨ Успішно оновлено. Всього зальотів у базі: {len(valid_data)}")
 
 
 if __name__ == "__main__":
