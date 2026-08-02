@@ -6,101 +6,125 @@
     <title>Моніторинг Зальотів YouTube</title>
     <style>
         body {
-            background-color: #121212;
-            color: #fff;
-            font-family: Arial, sans-serif;
             margin: 0;
-            padding: 20px;
+            padding: 0;
+            background-color: #121212;
+            color: #ffffff;
+            font-family: Arial, sans-serif;
+            overflow-x: hidden;
         }
-        h1 {
-            color: #ff4757;
-            text-align: center;
-            margin-bottom: 30px;
-        }
+
+        /* Притискаємо все до лівого краю */
         .container {
-            max-width: 800px;
-            margin: 0 auto;
+            width: 100% !important;
+            max-width: 100% !important;
+            margin: 0 !important;
+            padding: 20px 10px !important;
         }
-        .card {
-            background: #1e1e1e;
-            padding: 15px;
-            margin-bottom: 15px;
-            border-radius: 8px;
+
+        h1 {
+            text-align: left;
+            margin-left: 10px;
+            color: #ff4757;
+        }
+
+        /* Збільшена картка зальоту */
+        .zalyot-card {
             display: flex;
-            gap: 15px;
             align-items: center;
-            border-left: 4px solid #ff4757;
+            background: #1e1e1e;
+            padding: 24px 28px !important;
+            margin-bottom: 24px !important;
+            border-radius: 12px;
+            border-left: 6px solid #ff4757;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
         }
-        .card img {
-            width: 120px;
-            height: 68px;
-            border-radius: 4px;
-            object-fit: cover;
+
+        /* Збільшене прев'ю відео зліва */
+        .zalyot-card img {
+            width: 320px !important;
+            height: auto !important;
+            border-radius: 8px;
+            margin-right: 25px;
+            flex-shrink: 0;
         }
-        .info h3 {
-            margin: 0 0 5px 0;
-            font-size: 18px;
+
+        .info {
+            display: flex;
+            flex-direction: column;
         }
-        .info h3 a {
-            color: #fff;
+
+        /* Великий заголовок ролика */
+        .zalyot-card h3 {
+            margin: 0 0 12px 0;
+        }
+
+        .zalyot-card h3 a {
+            font-size: 24px !important;
+            color: #ffffff;
             text-decoration: none;
+            line-height: 1.3;
         }
-        .info h3 a:hover {
+
+        .zalyot-card h3 a:hover {
             text-decoration: underline;
         }
-        .info p {
-            margin: 3px 0;
-            color: #bbb;
-            font-size: 14px;
+
+        /* Збільшений текст статистики */
+        .zalyot-card p {
+            font-size: 17px !important;
+            margin: 6px 0;
+            color: #cccccc;
         }
-        .badge {
+
+        .percent {
             color: #2ed573;
             font-weight: bold;
         }
     </style>
 </head>
 <body>
+
     <div class="container">
         <h1>🔥 Моніторинг Зальотів YouTube</h1>
-        <div id="content">Завантаження даних...</div>
+        <div id="cards-container">
+            <!-- Сюди динамічно завантажуються картки -->
+        </div>
     </div>
 
     <script>
         fetch('data.json')
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Файл не знайдено');
-                }
-                return response.json();
-            })
+            .then(response => response.json())
             .then(data => {
-                const container = document.getElementById('content');
-                if (!data || data.length === 0) {
-                    container.innerHTML = '<p style="text-align:center; color:#888;">Поки що немає даних про зальоти.</p>';
+                const container = document.getElementById('cards-container');
+                container.innerHTML = '';
+
+                if (data.length === 0) {
+                    container.innerHTML = '<p style="margin-left: 10px;">Поки що немає нових зальотів за останні 7 днів.</p>';
                     return;
                 }
-                
-                let html = '';
+
                 data.forEach(item => {
-                    html += `
-                        <div class="card">
+                    const card = document.createElement('div');
+                    card.className = 'zalyot-card';
+                    card.innerHTML = `
+                        <a href="${item.url}" target="_blank">
                             <img src="${item.thumbnail}" alt="Thumbnail">
-                            <div class="info">
-                                <h3><a href="${item.url}" target="_blank">${item.title}</a></h3>
-                                <p>👤 <b>Автор:</b> ${item.channel}</p>
-                                <p>👁 <b>Перегляди:</b> ${item.views.toLocaleString()} (Норма: ${item.norm.toLocaleString()})</p>
-                                <p>📈 Відхилення: <span class="badge">+${item.percent}%</span></p>
-                                <p style="font-size: 12px; color: #777;">🕒 ${item.time}</p>
-                            </div>
+                        </a>
+                        <div class="info">
+                            <h3><a href="${item.url}" target="_blank">${item.title}</a></h3>
+                            <p>👤 <strong>Автор:</strong> ${item.channel}</p>
+                            <p>👁 <strong>Перегляди:</strong> ${item.views.toLocaleString()} (Норма: ${item.norm.toLocaleString()})</p>
+                            <p>📊 <strong>Відхилення:</strong> <span class="percent">+${item.percent}%</span></p>
+                            <p>⚡️ <strong>Швидкість:</strong> ${item.views_per_hour ? item.views_per_hour.toLocaleString() : 0} п/год</p>
+                            <p>⏱ <strong>Викладено:</strong> ${item.time} (${item.relative_time || ''})</p>
                         </div>
                     `;
+                    container.appendChild(card);
                 });
-                container.innerHTML = html;
             })
-            .catch(error => {
-                console.error('Помилка завантаження:', error);
-                document.getElementById('content').innerHTML = '<p style="text-align:center; color:#ff4757;">Помилка завантаження даних або файл ще не створено.</p>';
-            });
+            .catch(error => console.error('Помилка завантаження data.json:', error));
     </script>
+
 </body>
 </html>
