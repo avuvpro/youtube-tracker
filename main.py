@@ -93,41 +93,29 @@ def main():
   for ch_url in channels:
     ch_id, uploads_id = get_channel_id_by_url(ch_url)
     if not uploads_id:
+      print(f"Не вдалося знайти канал: {ch_url}")
       continue
 
     videos = get_video_stats(uploads_id)
     if not videos:
+      print(f"Немає відео для каналу: {ch_url}")
       continue
 
     channel_name = videos[0].get("channel", "Unknown")
-
-    past_videos = videos[1:]
-    past_views = sorted([v["views"] for v in past_videos]) if past_videos else [100]
-
-    if len(past_views) >= 6:
-      clean_past = past_views[2:-2]
-    else:
-      clean_past = past_views
-
-    median_views = (
-        clean_past[len(clean_past) // 2] if clean_past else 100
-    )
-    if median_views == 0:
-      median_views = 100
-
     latest_video = videos[0]
     lat_views = latest_video["views"]
     vid_id = latest_video["id"]
 
-    if vid_id in seen_ids:
-      continue
+    past_videos = videos[1:]
+    past_views = sorted([v["views"] for v in past_videos]) if past_videos else [100]
+    median_views = past_views[len(past_views) // 2] if past_views else 100
+    if median_views == 0:
+      median_views = 100
 
-    # РОБИМО КОЖНЕ ОСТАННЄ ВІДЕО ЗАЛЬОТОМ
-    is_zalyot = True
     multiplier = lat_views / median_views if median_views > 0 else 2.0
+    percent_diff = int((multiplier - 1) * 100)
 
-    if is_zalyot:
-      percent_diff = int((multiplier - 1) * 100) if median_views > 0 else 100
+    if vid_id not in seen_ids:
       item = {
           "id": vid_id,
           "title": latest_video["title"],
@@ -140,13 +128,14 @@ def main():
           "time": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M"),
       }
       new_zalyoty.append(item)
+      seen_ids.add(vid_id)
 
       msg = (
-          f"🔥 *ОСТАННЄ ВІДЕО ЗАЛЬОТ!*\n\n"
+          f"🔥 *НОВЕ ВІДЕО З КАНАЛУ!*\n\n"
           f"👤 *Автор:* {channel_name}\n"
           f"🎬 *Ролик:* [{latest_video['title']}]({item['url']})\n"
           f"👁 *Перегляди:* {lat_views:,}\n"
-          f"📈 *Норма:* {median_views:,}"
+          f"📈 *Норма каналу:* {median_views:,}"
       )
       send_telegram(msg)
 
@@ -154,6 +143,9 @@ def main():
     all_data = new_zalyoty + detected
     with open(DATA_FILE, "w", encoding="utf-8") as f:
       json.dump(all_data, f, ensure_ascii=False, indent=2)
+    print(f"Успішно додано відео: {len(new_zalyoty)}")
+  else:
+    print("Нових відео не знайдено.")
 
 
 if __name__ == "__main__":
