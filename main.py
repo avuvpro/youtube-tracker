@@ -101,7 +101,8 @@ def format_time_info(published_at_str):
 
 
 def get_video_stats(playlist_id):
-  playlist_url = f"https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails&playlistId={playlist_id}&maxResults=25&key={YOUTUBE_API_KEY}"
+  # Збільшено ліміт до 50, щоб захоплювати глибшу історію каналу крізь Shorts
+  playlist_url = f"https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails&playlistId={playlist_id}&maxResults=50&key={YOUTUBE_API_KEY}"
   res = requests.get(playlist_url).json()
 
   videos = []
@@ -173,11 +174,11 @@ def main():
 
     videos = get_video_stats(uploads_id)
     if len(videos) < 5:
-      print(f"  ❌ Занадто мало відео ({len(videos)})")
+      print(f"  ❌ Занадто мало довгих відео ({len(videos)})")
       continue
 
     channel_name = videos[0].get("channel", "Unknown")
-    print(f"  ✅ Канал: {channel_name} (знайдено відео: {len(videos)})")
+    print(f"  ✅ Канал: {channel_name} (довгих відео знайдено: {len(videos)})")
 
     for i, candidate_video in enumerate(videos):
       pub_str = candidate_video["published_at"]
@@ -187,16 +188,13 @@ def main():
         continue
 
       if pub_time < seven_days_ago:
-        break  # Старіші за 7 днів пропускаємо
+        break
 
       vid_id = candidate_video["id"]
       lat_views = candidate_video["views"]
       title = candidate_video["title"]
 
       if vid_id in seen_ids:
-        print(
-            f"    ⏭ Пропущено (вже є в базі): {title} ({lat_views:,} переглядів)"
-        )
         continue
 
       other_videos = [v for j, v in enumerate(videos) if j != i]
@@ -215,19 +213,16 @@ def main():
 
       multiplier = lat_views / median_views if median_views > 0 else 1
       print(
-          f"    🔍 {title[:40]}... | Перегляди: {lat_views:,} | Норма:"
+          f"    🔍 {title[:35]}... | Перегляди: {lat_views:,} | Норма:"
           f" {median_views:,} | Множник: {multiplier:.2f}x"
       )
 
-      # Множник знижено до 2.0, щоб точно піймати великі зальоти
-      if lat_views >= (median_views * 2.0) or lat_views >= 30000:
-        if multiplier >= 2.0:
+      # Знижено поріг назад до 1.5x, щоб підхоплювати гарні зальоти
+      is_zalyot = False
+      if lat_views >= (median_views * 1.5) or lat_views >= 30000:
+        if multiplier >= 1.5:
           print(f"    🔥 ЦЕ ЗАЛЬОТ! Додаємо.")
           is_zalyot = True
-        else:
-          is_zalyot = False
-      else:
-        is_zalyot = False
 
       if is_zalyot:
         percent_diff = int((multiplier - 1) * 100)
