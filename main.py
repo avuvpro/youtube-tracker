@@ -161,6 +161,8 @@ def main():
     channels = [line.strip() for line in f if line.strip()]
 
   new_zalyoty = []
+  now = datetime.now(timezone.utc)
+  seven_days_ago = now - timedelta(days=7)
 
   for ch_url in channels:
     ch_id, uploads_id = get_channel_id_by_url(ch_url)
@@ -174,73 +176,79 @@ def main():
 
     channel_name = videos[0].get("channel", "Unknown")
 
-    past_videos = videos[1:]
-    past_views = sorted([v["views"] for v in past_videos])
+    # Перевіряємо КОЖНЕ відео за останні 7 днів
+    for i, candidate_video in enumerate(videos):
+      pub_str = candidate_video["published_at"]
+      try:
+        pub_time = datetime.fromisoformat(pub_str.replace("Z", "+00:00"))
+      except:
+        continue
 
-    if len(past_views) >= 6:
-      clean_past = past_views[2:-2]
-    else:
-      clean_past = past_views
+      # Якщо відео старіше за 7 днів, зупиняємо перевірку цього каналу
+      if pub_time < seven_days_ago:
+        break
 
-    median_views = (
-        clean_past[len(clean_past) // 2] if clean_past else 1000
-    )
-    if median_views == 0:
-      median_views = 100
+      vid_id = candidate_video["id"]
+      if vid_id in seen_ids:
+        continue
 
-    latest_video = videos[0]
-    lat_views = latest_video["views"]
-    vid_id = latest_video["id"]
+      lat_views = candidate_video["views"]
 
-    if vid_id in seen_ids:
-      continue
+      # Рахуємо медіану по решті відео каналу
+      other_videos = [v for j, v in enumerate(videos) if j != i]
+      past_views = sorted([v["views"] for v in other_videos])
 
-    is_zalyot = False
-    multiplier = lat_views / median_views if median_views > 0 else 1
+      if len(past_views) >= 6:
+        clean_past = past_views[2:-2]
+      else:
+        clean_past = past_views
 
-    if lat_views >= (median_views * 1.5) or lat_views >= 50000:
-      if multiplier >= 1.5:
-        is_zalyot = True
-
-    if is_zalyot:
-      percent_diff = int((multiplier - 1) * 100)
-      formatted_date, relative_time = format_time_info(
-          latest_video["published_at"]
+      median_views = (
+          clean_past[len(clean_past) // 2] if clean_past else 1000
       )
+      if median_views == 0:
+        median_views = 100
 
-      item = {
-          "id": vid_id,
-          "title": latest_video["title"],
-          "channel": channel_name,
-          "views": lat_views,
-          "norm": median_views,
-          "percent": percent_diff,
-          "url": f"https://www.youtube.com/watch?v={vid_id}",
-          "thumbnail": f"https://img.youtube.com/vi/{vid_id}/hqdefault.jpg",
-          "time": formatted_date,
-          "relative_time": relative_time,
-          "published_at": latest_video["published_at"],
-      }
-      new_zalyoty.append(item)
-      seen_ids.add(vid_id)
+      is_zalyot = False
+      multiplier = lat_views / median_views if median_views > 0 else 1
 
-      msg = (
-          f"🔥 *ЗНАЙДЕНО ЗАЛЬОТ!*\n\n"
-          f"👤 *Автор:* {channel_name}\n"
-          f"🎬 *Ролик:* [{latest_video['title']}]({item['url']})\n"
-          f"👁 *Перегляди:* {lat_views:,}\n"
-          f"📈 *Норма (медіана):* {median_views:,}\n"
-          f"📊 *Відхилення:* `+{percent_diff}%`\n"
-          f"⏱ *Викладено:* {formatted_date} ({relative_time})"
-      )
-      send_telegram(msg)
+      if lat_views >= (median_views * 1.5) or lat_views >= 50000:
+        if multiplier >= 1.5:
+          is_zalyot = True
 
-  # Об'єднуємо старі та нові дані
+      if is_zalyot:
+        percent_diff = int((multiplier - 1) * 100)
+        formatted_date, relative_time = format_time_info(pub_str)
+
+        item = {
+            "id": vid_id,
+            "title": candidate_video["title"],
+            "channel": channel_name,
+            "views": lat_views,
+            "norm": median_views,
+            "percent": percent_diff,
+            "url": f"https://www.youtube.com/watch?v={vid_id}",
+            "thumbnail": f"https://img.youtube.com/vi/{vid_id}/hqdefault.jpg",
+            "time": formatted_date,
+            "relative_time": relative_time,
+            "published_at": pub_str,
+        }
+        new_zalyoty.append(item)
+        seen_ids.add(vid_id)
+
+        msg = (
+            f"🔥 *ЗНАЙДЕНО ЗАЛЬОТ!*\n\n"
+            f"👤 *Автор:* {channel_name}\n"
+            f"🎬 *Ролик:* [{candidate_video['title']}]({item['url']})\n"
+            f"👁 *Перегляди:* {lat_views:,}\n"
+            f"📈 *Норма (медіана):* {median_views:,}\n"
+            f"📊 *Відхилення:* `+{percent_diff}%`\n"
+            f"⏱ *Викладено:* {formatted_date} ({relative_time})"
+        )
+        send_telegram(msg)
+
+  # Об'єднуємо та фільтруємо весь список за 7 днів
   all_data = new_zalyoty + detected
-
-  # Фільтруємо так, щоб залишилися тільки відео за останні 7 днів
-  now = datetime.now(timezone.utc)
-  seven_days_ago = now - timedelta(days=7)
 
   valid_data = []
   for item in all_data:
