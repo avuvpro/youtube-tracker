@@ -1,6 +1,7 @@
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import json
 import os
+import re
 import requests
 
 YOUTUBE_API_KEY = os.environ.get("YOUTUBE_API_KEY")
@@ -8,6 +9,21 @@ TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 
 DATA_FILE = "data.json"
+
+MONTHS_UA = {
+    1: "січня",
+    2: "лютого",
+    3: "березня",
+    4: "квітня",
+    5: "травня",
+    6: "червня",
+    7: "липня",
+    8: "серпня",
+    9: "вересня",
+    10: "жовтня",
+    11: "листопада",
+    12: "грудня",
+}
 
 
 def send_telegram(text):
@@ -35,8 +51,57 @@ def get_channel_id_by_url(url):
   return None, None
 
 
+def parse_iso8601_duration(duration_str):
+  match = re.match(r"PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?", duration_str)
+  if not match:
+    return 0
+  hours = int(match.group(1)) if match.group(1) else 0
+  minutes = int(match.group(2)) if match.group(2) else 0
+  seconds = int(match.group(3)) if match.group(3) else 0
+  return hours * 3600 + minutes * 60 + seconds
+
+
+def format_time_info(published_at_str):
+  try:
+    pub_time = datetime.fromisoformat(
+        published_at_str.replace("Z", "+00:00")
+    )
+  except Exception:
+    return published_at_str, ""
+
+  now = datetime.now(timezone.utc)
+
+  day = pub_time.day
+  month_name = MONTHS_UA.get(pub_time.month, "")
+  time_str = pub_time.strftime("%H:%M")
+  formatted_date = f"{day} {month_name}, {time_str}"
+
+  diff = now - pub_time
+  total_hours = int(diff.total_seconds() // 3600)
+  if total_hours < 0:
+    total_hours = 0
+
+  if total_hours < 24:
+    if total_hours == 1:
+      relative_str = "1 годину тому"
+    elif 2 <= total_hours <= 4:
+      relative_str = f"{total_hours} години тому"
+    else:
+      relative_str = f"{total_hours} годин тому"
+  else:
+    days = total_hours // 24
+    if days == 1:
+      relative_str = "1 день тому"
+    elif 2 <= days <= 4:
+      relative_str = f"{days} дні тому"
+    else:
+      relative_str = f"{days} днів тому"
+
+  return formatted_date, relative_str
+
+
 def get_video_stats(playlist_id):
-  playlist_url = f"https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails&playlistId={playlist_id}&maxResults=20&key={YOUTUBE_API_KEY}"
+  playlist_url = f"https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails&playlistId={playlist_id}&maxResults=25&key={YOUTUBE_API_KEY}"
   res = requests.get(playlist_url).json()
 
   videos = []
@@ -52,18 +117,25 @@ def get_video_stats(playlist_id):
     return []
 
   vids_ids = ",".join([v["id"] for v in videos])
-  stats_url = f"https://www.googleapis.com/youtube/v3/videos?part=statistics,snippet&id={vids_ids}&key={YOUTUBE_API_KEY}"
+  stats_url = f"https://www.googleapis.com/youtube/v3/videos?part=statistics,snippet,contentDetails&id={vids_ids}&key={YOUTUBE_API_KEY}"
   stats_res = requests.get(stats_url).json()
 
+  processed_videos = []
   for item in stats_res.get("items", []):
     vid = item["id"]
     views = int(item["statistics"].get("viewCount", 0))
+    duration_str = item["contentDetails"].get("duration", "PT0S")
+    duration_sec = parse_iso8601_duration(duration_str)
+
     for v in videos:
       if v["id"] == vid:
         v["views"] = views
         v["channel"] = item["snippet"]["channelTitle"]
+        v["duration"] = duration_sec
+        if duration_sec > 60:
+          processed_videos.append(v)
 
-  return videos
+  return processed_videos
 
 
 def main():
@@ -97,25 +169,45 @@ def main():
       continue
 
     videos = get_video_stats(uploads_id)
-    if not videos:
-      print(f"Немає відео для каналу: {ch_url}")
+    if len(videos) < 5:
       continue
 
     channel_name = videos[0].get("channel", "Unknown")
+
+    past_videos = videos[1:]
+    past_views = sorted([v["views"] for v in past_videos])
+
+    if len(past_views) >= 6:
+      clean_past = past_views[2:-2]
+    else:
+      clean_past = past_views
+
+    median_views = (
+        clean_past[len(clean_past) // 2] if clean_past else 1000
+    )
+    if median_views == 0:
+      median_views = 100
+
     latest_video = videos[0]
     lat_views = latest_video["views"]
     vid_id = latest_video["id"]
 
-    past_videos = videos[1:]
-    past_views = sorted([v["views"] for v in past_videos]) if past_videos else [100]
-    median_views = past_views[len(past_views) // 2] if past_views else 100
-    if median_views == 0:
-      median_views = 100
+    if vid_id in seen_ids:
+      continue
 
-    multiplier = lat_views / median_views if median_views > 0 else 2.0
-    percent_diff = int((multiplier - 1) * 100)
+    is_zalyot = False
+    multiplier = lat_views / median_views if median_views > 0 else 1
 
-    if vid_id not in seen_ids:
+    if lat_views >= (median_views * 1.5) or lat_views >= 50000:
+      if multiplier >= 1.5:
+        is_zalyot = True
+
+    if is_zalyot:
+      percent_diff = int((multiplier - 1) * 100)
+      formatted_date, relative_time = format_time_info(
+          latest_video["published_at"]
+      )
+
       item = {
           "id": vid_id,
           "title": latest_video["title"],
@@ -125,27 +217,48 @@ def main():
           "percent": percent_diff,
           "url": f"https://www.youtube.com/watch?v={vid_id}",
           "thumbnail": f"https://img.youtube.com/vi/{vid_id}/hqdefault.jpg",
-          "time": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M"),
+          "time": formatted_date,
+          "relative_time": relative_time,
+          "published_at": latest_video["published_at"],
       }
       new_zalyoty.append(item)
       seen_ids.add(vid_id)
 
       msg = (
-          f"🔥 *НОВЕ ВІДЕО З КАНАЛУ!*\n\n"
+          f"🔥 *ЗНАЙДЕНО ЗАЛЬОТ!*\n\n"
           f"👤 *Автор:* {channel_name}\n"
           f"🎬 *Ролик:* [{latest_video['title']}]({item['url']})\n"
           f"👁 *Перегляди:* {lat_views:,}\n"
-          f"📈 *Норма каналу:* {median_views:,}"
+          f"📈 *Норма (медіана):* {median_views:,}\n"
+          f"📊 *Відхилення:* `+{percent_diff}%`\n"
+          f"⏱ *Викладено:* {formatted_date} ({relative_time})"
       )
       send_telegram(msg)
 
-  if new_zalyoty:
-    all_data = new_zalyoty + detected
-    with open(DATA_FILE, "w", encoding="utf-8") as f:
-      json.dump(all_data, f, ensure_ascii=False, indent=2)
-    print(f"Успішно додано відео: {len(new_zalyoty)}")
-  else:
-    print("Нових відео не знайдено.")
+  # Об'єднуємо старі та нові дані
+  all_data = new_zalyoty + detected
+
+  # Фільтруємо так, щоб залишилися тільки відео за останні 7 днів
+  now = datetime.now(timezone.utc)
+  seven_days_ago = now - timedelta(days=7)
+
+  valid_data = []
+  for item in all_data:
+    pub_str = item.get("published_at")
+    if pub_str:
+      try:
+        pub_time = datetime.fromisoformat(pub_str.replace("Z", "+00:00"))
+        if pub_time >= seven_days_ago:
+          valid_data.append(item)
+      except:
+        pass
+
+  with open(DATA_FILE, "w", encoding="utf-8") as f:
+    json.dump(valid_data, f, ensure_ascii=False, indent=2)
+
+  print(
+      f"Успішно оновлено. Актуальних зальотів за 7 днів: {len(valid_data)}"
+  )
 
 
 if __name__ == "__main__":
