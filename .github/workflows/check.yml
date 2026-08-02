@@ -32,7 +32,8 @@ jobs:
 
       - name: Commit and push changes if data updated
         run: |
-          git config --global user.name "GitHub Action Bot"
-          git config --global user.email "bot@github.com"
-          git add data.json
-          git diff --quiet && git diff --staged --quiet || (git commit -m "Update tracked video data" && git push)
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.io"
+          git add .
+          git commit -m "Auto-update YouTube stats" || echo "No changes to commit"
+          git push
