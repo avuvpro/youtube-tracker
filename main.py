@@ -96,13 +96,13 @@ def main():
       continue
 
     videos = get_video_stats(uploads_id)
-    if len(videos) < 5:
+    if not videos:
       continue
 
     channel_name = videos[0].get("channel", "Unknown")
 
     past_videos = videos[1:]
-    past_views = sorted([v["views"] for v in past_videos])
+    past_views = sorted([v["views"] for v in past_videos]) if past_videos else [100]
 
     if len(past_views) >= 6:
       clean_past = past_views[2:-2]
@@ -110,7 +110,7 @@ def main():
       clean_past = past_views
 
     median_views = (
-        clean_past[len(clean_past) // 2] if clean_past else 1000
+        clean_past[len(clean_past) // 2] if clean_past else 100
     )
     if median_views == 0:
       median_views = 100
@@ -122,12 +122,12 @@ def main():
     if vid_id in seen_ids:
       continue
 
-    # ТЕСТОВИЙ РЕЖИМ: примусово фіксуємо зальот
+    # РОБИМО КОЖНЕ ОСТАННЄ ВІДЕО ЗАЛЬОТОМ
     is_zalyot = True
-    multiplier = lat_views / median_views if median_views > 0 else 1
+    multiplier = lat_views / median_views if median_views > 0 else 2.0
 
     if is_zalyot:
-      percent_diff = int((multiplier - 1) * 100) if median_views > 0 else 0
+      percent_diff = int((multiplier - 1) * 100) if median_views > 0 else 100
       item = {
           "id": vid_id,
           "title": latest_video["title"],
@@ -142,11 +142,11 @@ def main():
       new_zalyoty.append(item)
 
       msg = (
-          f"🔥 *ТЕСТОВЕ СПОВІЩЕННЯ!*\n\n"
+          f"🔥 *ОСТАННЄ ВІДЕО ЗАЛЬОТ!*\n\n"
           f"👤 *Автор:* {channel_name}\n"
           f"🎬 *Ролик:* [{latest_video['title']}]({item['url']})\n"
           f"👁 *Перегляди:* {lat_views:,}\n"
-          f"📈 *Відхилення від норми:* `+{percent_diff}%`"
+          f"📈 *Норма:* {median_views:,}"
       )
       send_telegram(msg)
 
