@@ -1,10 +1,9 @@
 name: YouTube Monitor Bot
 
 on:
-  schedule:
-    # Запуск кожні 3 години (можеш змінити на '0 */2 * * *' якщо треба кожні 2 години)
-    - cron: '0 */3 * * *'
-  workflow_dispatch: # Залишає можливість запуску вручну за кнопкою
+  repository_dispatch:
+    types: [run-bot]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -31,7 +30,7 @@ jobs:
         run: |
           python main.py
 
-      - name: Крок 5. Збереження оновленого data.json у репозиторій
+      - name: Крок 5. Збереження оновленого data.json
         run: |
           git config --global user.name "GitHub Actions Bot"
           git config --global user.email "actions@github.com"
