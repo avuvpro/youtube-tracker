@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>YouTube Tracker</title>
+    <link rel="icon" href="icon.png" type="image/png">
     <style>
         * {
             box-sizing: border-box;
@@ -19,24 +20,39 @@
             overflow: hidden;
         }
 
-        /* Невидима зона активації бокового меню на лівому краї */
         .sidebar-trigger {
             position: fixed;
             top: 0;
             left: 0;
-            width: 20px;
+            width: 50px;
             height: 100%;
             z-index: 99;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
         }
 
-        /* Бокове меню з ефектом заблюрювання */
+        .sidebar-handle {
+            width: 6px;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 0 4px 4px 0;
+            transition: all 0.2s ease;
+        }
+
+        .sidebar-trigger:hover .sidebar-handle {
+            background: #ff334b;
+            height: 60px;
+            width: 8px;
+        }
+
         .sidebar {
             position: fixed;
             top: 0;
             left: -280px;
             width: 280px;
             height: 100%;
-            background: rgba(20, 20, 20, 0.65);
+            background: rgba(20, 20, 20, 0.75);
             backdrop-filter: blur(25px);
             -webkit-backdrop-filter: blur(25px);
             border-right: 1px solid rgba(255, 255, 255, 0.08);
@@ -48,7 +64,8 @@
         }
 
         .sidebar-trigger:hover ~ .sidebar,
-        .sidebar:hover {
+        .sidebar:hover,
+        .sidebar.open {
             left: 0;
         }
 
@@ -84,7 +101,6 @@
             color: #ffffff;
         }
 
-        /* Основний робочий простір */
         .main-content {
             margin-left: 0;
             height: 100vh;
@@ -105,7 +121,6 @@
             display: block;
         }
 
-        /* Шапка розділу */
         .dashboard-header {
             margin-bottom: 30px;
         }
@@ -122,14 +137,12 @@
             color: rgba(255, 255, 255, 0.5);
         }
 
-        /* Сітка карток */
         .hits-grid {
             display: flex;
             flex-direction: column;
             gap: 16px;
         }
 
-        /* Стиль карток */
         .hit-card {
             background: #181818;
             border: 1px solid rgba(255, 255, 255, 0.08);
@@ -221,11 +234,11 @@
 </head>
 <body>
 
-    <!-- Зона активації бокового меню -->
-    <div class="sidebar-trigger"></div>
+    <div class="sidebar-trigger" id="sidebarTrigger">
+        <div class="sidebar-handle"></div>
+    </div>
 
-    <!-- Виїжджаюче бокове меню -->
-    <aside class="sidebar">
+    <aside class="sidebar" id="sidebar">
         <div class="sidebar-title">Меню</div>
         <ul class="menu-list">
             <li class="menu-item active" data-target="panel-hits">
@@ -239,16 +252,12 @@
         </ul>
     </aside>
 
-    <!-- Основний контент -->
     <main class="main-content">
-        
-        <!-- Вкладка 1: Хіти відео -->
         <div id="panel-hits" class="panel-content active">
             <div class="dashboard-header">
                 <h1>Хіти відео</h1>
                 <p>Найуспішніші ролик за переглядами та показниками</p>
             </div>
-            
             <div class="hits-grid" id="hits-container">
                 <div class="hit-card">
                     <div class="hit-details">
@@ -258,7 +267,6 @@
             </div>
         </div>
 
-        <!-- Вкладка 2: Аналітика -->
         <div id="panel-analytics" class="panel-content">
             <div class="dashboard-header">
                 <h1>Аналітика</h1>
@@ -266,11 +274,16 @@
             </div>
             <div class="placeholder-text">Розділ аналітики</div>
         </div>
-
     </main>
 
     <script>
-        // Логіка перемикання вкладок меню
+        const trigger = document.getElementById('sidebarTrigger');
+        const sidebar = document.getElementById('sidebar');
+
+        trigger.addEventListener('click', () => {
+            sidebar.classList.toggle('open');
+        });
+
         const menuItems = document.querySelectorAll('.menu-item');
         const panels = document.querySelectorAll('.panel-content');
 
@@ -283,10 +296,10 @@
                 
                 const targetId = item.getAttribute('data-target');
                 document.getElementById(targetId).classList.add('active');
+                sidebar.classList.remove('open');
             });
         });
 
-        // Динамічне завантаження даних та прев'ю з data.json
         async function loadVideoData() {
             try {
                 const response = await fetch('data.json');
@@ -298,19 +311,25 @@
                 const videos = data.videos || data;
 
                 videos.forEach(video => {
+                    const author = video.author || video.channel || video.channel_title || 'Не вказано';
+                    const norm = video.norm || video.average || video.expected || '—';
+                    const deviation = video.deviation || video.diff || video.percentage || '—';
+                    const speed = video.speed || video.velocity || '—';
+                    const date = video.date || video.published_at || video.time || '—';
+
                     const card = document.createElement('div');
                     card.className = 'hit-card';
                     card.innerHTML = `
-                        <img src="${video.thumbnail || ''}" alt="Thumbnail" class="video-thumb">
+                        <img src="${video.thumbnail || video.image || ''}" alt="Thumbnail" class="video-thumb">
                         <div class="hit-details">
-                            <div class="hit-title">${video.title}</div>
-                            <div class="hit-author">👤 Автор: ${video.author}</div>
+                            <div class="hit-title">${video.title || video.name}</div>
+                            <div class="hit-author">👤 Автор: ${author}</div>
                             <div class="hit-stats-row">
-                                <div class="stat-item">👁 Перегляди: ${video.views} (Норма: ${video.norm})</div>
-                                <div class="stat-item">📈 Відхилення: <span class="positive">${video.deviation}</span></div>
-                                <div class="stat-item">⚡ Швидкість: ${video.speed}</div>
+                                <div class="stat-item">👁 Перегляди: ${video.views} (Норма: ${norm})</div>
+                                <div class="stat-item">📈 Відхилення: <span class="positive">${deviation}</span></div>
+                                <div class="stat-item">⚡ Швидкість: ${speed}</div>
                             </div>
-                            <div class="hit-date">🕒 Викладено: ${video.date}</div>
+                            <div class="hit-date">🕒 Викладено: ${date}</div>
                         </div>
                     `;
                     container.appendChild(card);
@@ -322,6 +341,5 @@
 
         loadVideoData();
     </script>
-
 </body>
 </html>
