@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>YouTube Tracker - Мінімалістичний інтерфейс</title>
+    <title>YouTube Tracker</title>
     <style>
         * {
             box-sizing: border-box;
@@ -19,7 +19,7 @@
             overflow: hidden;
         }
 
-        /* Зона активації на лівому краї екрана */
+        /* Зона активації бокового меню на лівому краї */
         .sidebar-trigger {
             position: fixed;
             top: 0;
@@ -29,7 +29,7 @@
             z-index: 99;
         }
 
-        /* Бокове меню (glassmorphism) */
+        /* Бокове меню з ефектом заблюрювання */
         .sidebar {
             position: fixed;
             top: 0;
@@ -102,7 +102,7 @@
             display: block;
         }
 
-        /* Стилі для контенту "Хіти відео" (Функція 1) */
+        /* Стилі для блоку хітів відео */
         .dashboard-header {
             margin-bottom: 30px;
         }
@@ -185,43 +185,27 @@
     <!-- Основний контент -->
     <main class="main-content">
         
-        <!-- Функція 1: Хіти відео -->
+        <!-- Функція 1: Хіти відео (тут виводяться реальні дані) -->
         <div id="panel-hits" class="panel-content active">
             <div class="dashboard-header">
                 <h1>Хіти відео</h1>
-                <p>Найуспішніші ролик за переглядами та показниками залученості</p>
+                <p>Найуспішніші ролик за переглядами та показниками</p>
             </div>
-            <div class="hits-grid">
+            <div class="hits-grid" id="hits-container">
                 <div class="hit-card">
                     <div class="hit-info">
-                        <h3>Назва топового відео #1</h3>
-                        <div class="hit-stats">Перегляди: 124,500 • CTR: 8.4%</div>
+                        <h3>Завантаження даних...</h3>
                     </div>
-                    <div class="hit-badge">#1 Хіт</div>
-                </div>
-                <div class="hit-card">
-                    <div class="hit-info">
-                        <h3>Назва популярного відео #2</h3>
-                        <div class="hit-stats">Перегляди: 89,200 • CTR: 6.9%</div>
-                    </div>
-                    <div class="hit-badge">#2 Хіт</div>
-                </div>
-                <div class="hit-card">
-                    <div class="hit-info">
-                        <h3>Назва відео #3</h3>
-                        <div class="hit-stats">Перегляди: 45,100 • CTR: 5.2%</div>
-                    </div>
-                    <div class="hit-badge">#3 Хіт</div>
                 </div>
             </div>
         </div>
 
-        <!-- Функція 2 (заглушка) -->
+        <!-- Функція 2 -->
         <div id="panel-2" class="panel-content">
             <div class="placeholder-text">Розділ аналітики в розробці</div>
         </div>
 
-        <!-- Функція 3 (заглушка) -->
+        <!-- Функція 3 -->
         <div id="panel-3" class="panel-content">
             <div class="placeholder-text">Налаштування системи</div>
         </div>
@@ -229,6 +213,7 @@
     </main>
 
     <script>
+        // Логіка перемикання вкладок меню
         const menuItems = document.querySelectorAll('.menu-item');
         const panels = document.querySelectorAll('.panel-content');
 
@@ -243,6 +228,41 @@
                 document.getElementById(targetId).classList.add('active');
             });
         });
+
+        // Завантаження реальних даних з твого файлу (наприклад, data.json)
+        async function loadVideoData() {
+            try {
+                const response = await fetch('data.json'); // шлях до файлу з даними
+                const data = await response.json();
+                
+                const container = document.getElementById('hits-container');
+                container.innerHTML = '';
+
+                // Припускаємо, що дані приходять у вигляді масиву або об'єкта з відео
+                // Змініть `data.videos` під структуру вашого JSON-файлу
+                const videos = data.videos || data; 
+
+                videos.forEach((video, index) => {
+                    const card = document.createElement('div');
+                    card.className = 'hit-card';
+                    card.innerHTML = `
+                        <div class="hit-info">
+                            <h3>${video.title}</h3>
+                            <div class="hit-stats">Перегляди: ${Number(video.views).toLocaleString()} • CTR: ${video.ctr}%</div>
+                        </div>
+                        <div class="hit-badge">#${index + 1} Хіт</div>
+                    `;
+                    container.appendChild(card);
+                });
+            } catch (error) {
+                console.error('Помилка завантаження даних:', error);
+                document.getElementById('hits-container.innerHTML').innerHTML = `
+                    <div class="hit-card"><div class="hit-info"><h3>Не вдалося завантажити дані</h3></div></div>
+                `;
+            }
+        }
+
+        loadVideoData();
     </script>
 
 </body>
