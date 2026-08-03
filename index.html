@@ -300,7 +300,7 @@
             });
         });
 
-        // Функція для додавання пробілів у великі числа (наприклад: 582748 -> 582 748)
+        // Форматування чисел з відступами (наприклад: 582748 -> 582 748)
         function formatNumber(num) {
             if (num === undefined || num === null || num === '') return '—';
             return Number(num).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
@@ -317,32 +317,41 @@
                 const videos = data.videos || data;
 
                 videos.forEach(video => {
-                    const author = video.author || video.channel || video.channel_title || 'Не вказано';
-                    const norm = formatNumber(video.norm || video.average || video.expected);
-                    const views = formatNumber(video.views || video.view_count);
+                    const author = video.channel || video.author || 'Не вказано';
+                    const views = formatNumber(video.views);
+                    const norm = formatNumber(video.norm);
                     
-                    // Гнучкий пошук полів відхилення та швидкості
-                    let deviation = video.deviation || video.diff || video.percentage || video.percent || video.growth || video.change || '—';
-                    if (deviation !== '—' && !String(deviation).includes('%')) {
-                        deviation = deviation + '%';
+                    // Форматування відхилення (+1892%)
+                    let deviation = '—';
+                    if (video.percent !== undefined && video.percent !== null) {
+                        deviation = `+${formatNumber(video.percent)}%`;
                     }
 
-                    const speed = formatNumber(video.speed || video.velocity || video.views_per_hour || video.rate);
-                    const date = video.date || video.published_at || video.time || '—';
+                    const speed = formatNumber(video.views_per_hour);
+                    
+                    // Форматування дати як у попередньому варіанті (30 липня, 12:39 (3 дні тому))
+                    let dateStr = '—';
+                    if (video.time && video.relative_time) {
+                        dateStr = `${video.time} (${video.relative_time})`;
+                    } else if (video.time) {
+                        dateStr = video.time;
+                    } else if (video.published_at) {
+                        dateStr = video.published_at;
+                    }
 
                     const card = document.createElement('div');
                     card.className = 'hit-card';
                     card.innerHTML = `
-                        <img src="${video.thumbnail || video.image || ''}" alt="Thumbnail" class="video-thumb">
+                        <img src="${video.thumbnail || ''}" alt="Thumbnail" class="video-thumb">
                         <div class="hit-details">
-                            <div class="hit-title">${video.title || video.name}</div>
+                            <div class="hit-title">${video.title}</div>
                             <div class="hit-author">👤 Автор: ${author}</div>
                             <div class="hit-stats-row">
                                 <div class="stat-item">👁 Перегляди: ${views} (Норма: ${norm})</div>
                                 <div class="stat-item">📈 Відхилення: <span class="positive">${deviation}</span></div>
                                 <div class="stat-item">⚡ Швидкість: ${speed} п/год</div>
                             </div>
-                            <div class="hit-date">🕒 Викладено: ${date}</div>
+                            <div class="hit-date">🕒 Викладено: ${dateStr}</div>
                         </div>
                     `;
                     container.appendChild(card);
