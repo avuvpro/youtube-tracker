@@ -129,7 +129,7 @@
             gap: 16px;
         }
 
-        /* Стиль карток як на скріншоті */
+        /* Стиль карток */
         .hit-card {
             background: #181818;
             border: 1px solid rgba(255, 255, 255, 0.08);
@@ -143,7 +143,6 @@
             transition: border-color 0.2s;
         }
 
-        /* Червона смужка зліва як у вашому дизайні */
         .hit-card::before {
             content: '';
             position: absolute;
@@ -250,34 +249,10 @@
                 <p>Найуспішніші ролик за переглядами та показниками</p>
             </div>
             
-            <div class="hits-grid">
-                <!-- Картка 1 -->
+            <div class="hits-grid" id="hits-container">
                 <div class="hit-card">
-                    <img src="" alt="Thumbnail" class="video-thumb" id="thumb-1">
                     <div class="hit-details">
-                        <div class="hit-title">SARAAH (I Heard It Too) vs All Bosses Minecraft Battle</div>
-                        <div class="hit-author">👤 Автор: Gasbo</div>
-                        <div class="hit-stats-row">
-                            <div class="stat-item">👁 Перегляди: 477 195 (Норма: 29 239)</div>
-                            <div class="stat-item">📈 Відхилення: <span class="positive">+1532%</span></div>
-                            <div class="stat-item">⚡ Швидкість: 6 177 п/год</div>
-                        </div>
-                        <div class="hit-date">🕒 Викладено: 30 липня, 12:39 (3 дні тому)</div>
-                    </div>
-                </div>
-
-                <!-- Картка 2 -->
-                <div class="hit-card">
-                    <img src="" alt="Thumbnail" class="video-thumb" id="thumb-2">
-                    <div class="hit-details">
-                        <div class="hit-title">Long Horse vs The Most Powerful Minecraft Bosses | Minecraft Mob Battle</div>
-                        <div class="hit-author">👤 Автор: Namink</div>
-                        <div class="hit-stats-row">
-                            <div class="stat-item">👁 Перегляди: 17 642 (Норма: 5 323)</div>
-                            <div class="stat-item">📈 Відхилення: <span class="positive">+231%</span></div>
-                            <div class="stat-item">⚡ Швидкість: 299 п/год</div>
-                        </div>
-                        <div class="hit-date">🕒 Викладено: 31 липня, 07:00 (2 дні тому)</div>
+                        <div class="hit-title">Завантаження даних...</div>
                     </div>
                 </div>
             </div>
@@ -310,6 +285,42 @@
                 document.getElementById(targetId).classList.add('active');
             });
         });
+
+        // Динамічне завантаження даних та прев'ю з data.json
+        async function loadVideoData() {
+            try {
+                const response = await fetch('data.json');
+                const data = await response.json();
+                
+                const container = document.getElementById('hits-container');
+                container.innerHTML = '';
+
+                const videos = data.videos || data;
+
+                videos.forEach(video => {
+                    const card = document.createElement('div');
+                    card.className = 'hit-card';
+                    card.innerHTML = `
+                        <img src="${video.thumbnail || ''}" alt="Thumbnail" class="video-thumb">
+                        <div class="hit-details">
+                            <div class="hit-title">${video.title}</div>
+                            <div class="hit-author">👤 Автор: ${video.author}</div>
+                            <div class="hit-stats-row">
+                                <div class="stat-item">👁 Перегляди: ${video.views} (Норма: ${video.norm})</div>
+                                <div class="stat-item">📈 Відхилення: <span class="positive">${video.deviation}</span></div>
+                                <div class="stat-item">⚡ Швидкість: ${video.speed}</div>
+                            </div>
+                            <div class="hit-date">🕒 Викладено: ${video.date}</div>
+                        </div>
+                    `;
+                    container.appendChild(card);
+                });
+            } catch (error) {
+                console.error('Помилка завантаження даних:', error);
+            }
+        }
+
+        loadVideoData();
     </script>
 
 </body>
