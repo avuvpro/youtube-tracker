@@ -3,128 +3,147 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Моніторинг Зальотів YouTube</title>
-    <link rel="icon" type="image/png" href="icon.png">
+    <title>Мінімалістичний інтерфейс</title>
     <style>
-        body {
+        * {
+            box-sizing: border-box;
             margin: 0;
             padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        body {
             background-color: #121212;
             color: #ffffff;
-            font-family: Arial, sans-serif;
-            overflow-x: hidden;
+            height: 100vh;
+            overflow: hidden;
         }
 
-        /* Притискаємо все до лівого краю */
-        .container {
-            width: 100% !important;
-            max-width: 100% !important;
-            margin: 0 !important;
-            padding: 20px 10px !important;
+        /* Зона активації на лівому краї екрана */
+        .sidebar-trigger {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 20px;
+            height: 100%;
+            z-index: 99;
         }
 
-        h1 {
-            text-align: left;
-            margin-left: 10px;
-            color: #ff4757;
-        }
-
-        /* Збільшена картка зальоту */
-        .zalyot-card {
-            display: flex;
-            align-items: center;
-            background: #1e1e1e;
-            padding: 24px 28px !important;
-            margin-bottom: 24px !important;
-            border-radius: 12px;
-            border-left: 6px solid #ff4757;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-        }
-
-        /* Збільшене прев'ю відео зліва */
-        .zalyot-card img {
-            width: 320px !important;
-            height: auto !important;
-            border-radius: 8px;
-            margin-right: 25px;
-            flex-shrink: 0;
-        }
-
-        .info {
+        /* Бокове меню */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: -280px; /* Приховане за екраном */
+            width: 280px; /* Ширина відповідає твоїй зеленій полосці */
+            height: 100%;
+            background: rgba(30, 30, 30, 0.45); /* Напівпрозорий фон */
+            backdrop-filter: blur(20px); /* Сильне заблюрювання */
+            -webkit-backdrop-filter: blur(20px);
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 100;
             display: flex;
             flex-direction: column;
+            padding: 30px 20px;
         }
 
-        /* Великий заголовок ролика */
-        .zalyot-card h3 {
-            margin: 0 0 12px 0;
+        /* Показ меню при наведенні на лівий край або на саме меню */
+        .sidebar-trigger:hover ~ .sidebar,
+        .sidebar:hover {
+            left: 0;
         }
 
-        .zalyot-card h3 a {
-            font-size: 24px !important;
+        .sidebar-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 25px;
+            letter-spacing: 0.5px;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .menu-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .menu-item {
+            padding: 12px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s, color 0.2s;
+            font-size: 15px;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .menu-item:hover, .menu-item.active {
+            background: rgba(255, 255, 255, 0.1);
             color: #ffffff;
-            text-decoration: none;
-            line-height: 1.3;
         }
 
-        .zalyot-card h3 a:hover {
-            text-decoration: underline;
+        /* Основний робочий простір */
+        .main-content {
+            margin-left: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: margin-left 0.3s;
         }
 
-        /* Збільшений текст статистики */
-        .zalyot-card p {
-            font-size: 17px !important;
-            margin: 6px 0;
-            color: #cccccc;
+        .panel-content {
+            display: none;
+            font-size: 24px;
+            color: rgba(255, 255, 255, 0.5);
         }
 
-        .percent {
-            color: #2ed573;
-            font-weight: bold;
+        .panel-content.active {
+            display: block;
         }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <h1>🔥 Моніторинг Зальотів YouTube</h1>
-        <div id="cards-container">
-            <!-- Сюди динамічно завантажуються картки -->
-        </div>
-    </div>
+    <!-- Невидима зона тригера на лівому краї -->
+    <div class="sidebar-trigger"></div>
+
+    <!-- Виїжджаюче бокове меню -->
+    <aside class="sidebar">
+        <div class="sidebar-title">Меню</div>
+        <ul class="menu-list">
+            <li class="menu-item active" data-target="panel-1">Функція 1</li>
+            <li class="menu-item" data-target="panel-2">Функція 2</li>
+            <li class="menu-item" data-target="panel-3">Функція 3</li>
+        </ul>
+    </aside>
+
+    <!-- Основна зона, де відображаються вибрані функції -->
+    <main class="main-content">
+        <div id="panel-1" class="panel-content active">Вибрано: Функція 1</div>
+        <div id="panel-2" class="panel-content">Вибрано: Функція 2</div>
+        <div id="panel-3" class="panel-content">Вибрано: Функція 3</div>
+    </main>
 
     <script>
-        fetch('data.json')
-            .then(response => response.json())
-            .then(data => {
-                const container = document.getElementById('cards-container');
-                container.innerHTML = '';
+        // Логіка перемикання функцій при кліку
+        const menuItems = document.querySelectorAll('.menu-item');
+        const panels = document.querySelectorAll('.panel-content');
 
-                if (data.length === 0) {
-                    container.innerHTML = '<p style="margin-left: 10px;">Поки що немає нових зальотів за останні 7 днів.</p>';
-                    return;
-                }
+        menuItems.forEach(item => {
+            item.addEventListener('click', () => {
+                // Знімаємо активний клас з усіх пунктів та панелей
+                menuItems.forEach(i => i.classList.remove('active'));
+                panels.forEach(p => p.classList.remove('active'));
 
-                data.forEach(item => {
-                    const card = document.createElement('div');
-                    card.className = 'zalyot-card';
-                    card.innerHTML = `
-                        <a href="${item.url}" target="_blank">
-                            <img src="${item.thumbnail}" alt="Thumbnail">
-                        </a>
-                        <div class="info">
-                            <h3><a href="${item.url}" target="_blank">${item.title}</a></h3>
-                            <p>👤 <strong>Автор:</strong> ${item.channel}</p>
-                            <p>👁 <strong>Перегляди:</strong> ${item.views.toLocaleString()} (Норма: ${item.norm.toLocaleString()})</p>
-                            <p>📊 <strong>Відхилення:</strong> <span class="percent">+${item.percent}%</span></p>
-                            <p>⚡️ <strong>Швидкість:</strong> ${item.views_per_hour ? item.views_per_hour.toLocaleString() : 0} п/год</p>
-                            <p>⏱ <strong>Викладено:</strong> ${item.time} (${item.relative_time || ''})</p>
-                        </div>
-                    `;
-                    container.appendChild(card);
-                });
-            })
-            .catch(error => console.error('Помилка завантаження data.json:', error));
+                // Додаємо активний клас на вибраний пункт
+                item.classList.add('active');
+                
+                // Показуємо відповідну панель
+                const targetId = item.getAttribute('data-target');
+                document.getElementById(targetId).classList.add('active');
+            });
+        });
     </script>
 
 </body>
