@@ -300,6 +300,12 @@
             });
         });
 
+        // Функція для додавання пробілів у великі числа (наприклад: 582748 -> 582 748)
+        function formatNumber(num) {
+            if (num === undefined || num === null || num === '') return '—';
+            return Number(num).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+        }
+
         async function loadVideoData() {
             try {
                 const response = await fetch('data.json');
@@ -312,9 +318,16 @@
 
                 videos.forEach(video => {
                     const author = video.author || video.channel || video.channel_title || 'Не вказано';
-                    const norm = video.norm || video.average || video.expected || '—';
-                    const deviation = video.deviation || video.diff || video.percentage || '—';
-                    const speed = video.speed || video.velocity || '—';
+                    const norm = formatNumber(video.norm || video.average || video.expected);
+                    const views = formatNumber(video.views || video.view_count);
+                    
+                    // Гнучкий пошук полів відхилення та швидкості
+                    let deviation = video.deviation || video.diff || video.percentage || video.percent || video.growth || video.change || '—';
+                    if (deviation !== '—' && !String(deviation).includes('%')) {
+                        deviation = deviation + '%';
+                    }
+
+                    const speed = formatNumber(video.speed || video.velocity || video.views_per_hour || video.rate);
                     const date = video.date || video.published_at || video.time || '—';
 
                     const card = document.createElement('div');
@@ -325,9 +338,9 @@
                             <div class="hit-title">${video.title || video.name}</div>
                             <div class="hit-author">👤 Автор: ${author}</div>
                             <div class="hit-stats-row">
-                                <div class="stat-item">👁 Перегляди: ${video.views} (Норма: ${norm})</div>
+                                <div class="stat-item">👁 Перегляди: ${views} (Норма: ${norm})</div>
                                 <div class="stat-item">📈 Відхилення: <span class="positive">${deviation}</span></div>
-                                <div class="stat-item">⚡ Швидкість: ${speed}</div>
+                                <div class="stat-item">⚡ Швидкість: ${speed} п/год</div>
                             </div>
                             <div class="hit-date">🕒 Викладено: ${date}</div>
                         </div>
