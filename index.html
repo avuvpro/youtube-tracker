@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Мінімалістичний інтерфейс</title>
+    <title>YouTube Tracker - Мінімалістичний інтерфейс</title>
     <style>
         * {
             box-sizing: border-box;
@@ -13,7 +13,7 @@
         }
 
         body {
-            background-color: #121212;
+            background-color: #0f0f0f;
             color: #ffffff;
             height: 100vh;
             overflow: hidden;
@@ -29,56 +29,55 @@
             z-index: 99;
         }
 
-        /* Бокове меню */
+        /* Бокове меню (glassmorphism) */
         .sidebar {
             position: fixed;
             top: 0;
-            left: -280px; /* Приховане за екраном */
-            width: 280px; /* Ширина відповідає твоїй зеленій полосці */
+            left: -280px;
+            width: 280px;
             height: 100%;
-            background: rgba(30, 30, 30, 0.45); /* Напівпрозорий фон */
-            backdrop-filter: blur(20px); /* Сильне заблюрювання */
-            -webkit-backdrop-filter: blur(20px);
-            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(20, 20, 20, 0.65);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            border-right: 1px solid rgba(255, 255, 255, 0.08);
             transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             z-index: 100;
             display: flex;
             flex-direction: column;
-            padding: 30px 20px;
+            padding: 40px 20px;
         }
 
-        /* Показ меню при наведенні на лівий край або на саме меню */
         .sidebar-trigger:hover ~ .sidebar,
         .sidebar:hover {
             left: 0;
         }
 
         .sidebar-title {
-            font-size: 18px;
-            font-weight: 600;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: rgba(255, 255, 255, 0.4);
             margin-bottom: 25px;
-            letter-spacing: 0.5px;
-            color: rgba(255, 255, 255, 0.9);
         }
 
         .menu-list {
             list-style: none;
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 8px;
         }
 
         .menu-item {
             padding: 12px 16px;
             border-radius: 8px;
             cursor: pointer;
-            transition: background 0.2s, color 0.2s;
+            transition: all 0.2s ease;
             font-size: 15px;
             color: rgba(255, 255, 255, 0.7);
         }
 
         .menu-item:hover, .menu-item.active {
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.08);
             color: #ffffff;
         }
 
@@ -89,57 +88,157 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            transition: margin-left 0.3s;
+            padding: 40px;
+            overflow-y: auto;
         }
 
         .panel-content {
             display: none;
-            font-size: 24px;
-            color: rgba(255, 255, 255, 0.5);
+            width: 100%;
+            max-width: 900px;
         }
 
         .panel-content.active {
             display: block;
         }
+
+        /* Стилі для контенту "Хіти відео" (Функція 1) */
+        .dashboard-header {
+            margin-bottom: 30px;
+        }
+
+        .dashboard-header h1 {
+            font-size: 24px;
+            font-weight: 500;
+            color: #ffffff;
+            margin-bottom: 8px;
+        }
+
+        .dashboard-header p {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .hits-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+        }
+
+        .hit-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            padding: 20px;
+            border-radius: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: border-color 0.2s;
+        }
+
+        .hit-card:hover {
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .hit-info h3 {
+            font-size: 16px;
+            font-weight: 500;
+            margin-bottom: 6px;
+            color: #ffffff;
+        }
+
+        .hit-stats {
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .hit-badge {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .placeholder-text {
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 18px;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
 
-    <!-- Невидима зона тригера на лівому краї -->
+    <!-- Зона активації бокового меню -->
     <div class="sidebar-trigger"></div>
 
     <!-- Виїжджаюче бокове меню -->
     <aside class="sidebar">
-        <div class="sidebar-title">Меню</div>
+        <div class="sidebar-title">Навігація</div>
         <ul class="menu-list">
-            <li class="menu-item active" data-target="panel-1">Функція 1</li>
-            <li class="menu-item" data-target="panel-2">Функція 2</li>
-            <li class="menu-item" data-target="panel-3">Функція 3</li>
+            <li class="menu-item active" data-target="panel-hits">Хіти відео</li>
+            <li class="menu-item" data-target="panel-2">Аналітика</li>
+            <li class="menu-item" data-target="panel-3">Налаштування</li>
         </ul>
     </aside>
 
-    <!-- Основна зона, де відображаються вибрані функції -->
+    <!-- Основний контент -->
     <main class="main-content">
-        <div id="panel-1" class="panel-content active">Вибрано: Функція 1</div>
-        <div id="panel-2" class="panel-content">Вибрано: Функція 2</div>
-        <div id="panel-3" class="panel-content">Вибрано: Функція 3</div>
+        
+        <!-- Функція 1: Хіти відео -->
+        <div id="panel-hits" class="panel-content active">
+            <div class="dashboard-header">
+                <h1>Хіти відео</h1>
+                <p>Найуспішніші ролик за переглядами та показниками залученості</p>
+            </div>
+            <div class="hits-grid">
+                <div class="hit-card">
+                    <div class="hit-info">
+                        <h3>Назва топового відео #1</h3>
+                        <div class="hit-stats">Перегляди: 124,500 • CTR: 8.4%</div>
+                    </div>
+                    <div class="hit-badge">#1 Хіт</div>
+                </div>
+                <div class="hit-card">
+                    <div class="hit-info">
+                        <h3>Назва популярного відео #2</h3>
+                        <div class="hit-stats">Перегляди: 89,200 • CTR: 6.9%</div>
+                    </div>
+                    <div class="hit-badge">#2 Хіт</div>
+                </div>
+                <div class="hit-card">
+                    <div class="hit-info">
+                        <h3>Назва відео #3</h3>
+                        <div class="hit-stats">Перегляди: 45,100 • CTR: 5.2%</div>
+                    </div>
+                    <div class="hit-badge">#3 Хіт</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Функція 2 (заглушка) -->
+        <div id="panel-2" class="panel-content">
+            <div class="placeholder-text">Розділ аналітики в розробці</div>
+        </div>
+
+        <!-- Функція 3 (заглушка) -->
+        <div id="panel-3" class="panel-content">
+            <div class="placeholder-text">Налаштування системи</div>
+        </div>
+
     </main>
 
     <script>
-        // Логіка перемикання функцій при кліку
         const menuItems = document.querySelectorAll('.menu-item');
         const panels = document.querySelectorAll('.panel-content');
 
         menuItems.forEach(item => {
             item.addEventListener('click', () => {
-                // Знімаємо активний клас з усіх пунктів та панелей
                 menuItems.forEach(i => i.classList.remove('active'));
                 panels.forEach(p => p.classList.remove('active'));
 
-                // Додаємо активний клас на вибраний пункт
                 item.classList.add('active');
                 
-                // Показуємо відповідну панель
                 const targetId = item.getAttribute('data-target');
                 document.getElementById(targetId).classList.add('active');
             });
