@@ -2,38 +2,38 @@ name: YouTube Monitor Bot
 
 on:
   schedule:
-    - cron: '0 * * * *'
-  workflow_dispatch:
-
-permissions:
-  contents: write
+    # Запуск кожні 3 години (можеш змінити на '0 */2 * * *' якщо треба кожні 2 години)
+    - cron: '0 */3 * * *'
+  workflow_dispatch: # Залишає можливість запуску вручну за кнопкою
 
 jobs:
-  run-tracker:
+  build:
     runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+    steps:
+      - name: Крок 1. Завантаження репозиторію
+        uses: actions/checkout@v3
+
+      - name: Крок 2. Встановлення Python
+        uses: actions/setup-python@v4
         with:
           python-version: '3.10'
 
-      - name: Install dependencies
-        run: pip install requests
+      - name: Крок 3. Встановлення бібліотек
+        run: |
+          pip install requests
 
-      - name: Run script
+      - name: Крок 4. Запуск скрипта моніторингу
         env:
           YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: python main.py
-
-      - name: Commit and push changes if data updated
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.io"
-          git add .
-          git commit -m "Auto-update YouTube stats" || echo "No changes to commit"
-          git push
+          python main.py
+
+      - name: Крок 5. Збереження оновленого data.json у репозиторій
+        run: |
+          git config --global user.name "GitHub Actions Bot"
+          git config --global user.email "actions@github.com"
+          git add data.json
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-update data.json" && git push)
