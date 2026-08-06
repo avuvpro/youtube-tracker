@@ -190,7 +190,13 @@
             font-size: 16px;
             font-weight: 600;
             color: #ffffff;
+            text-decoration: none;
             line-height: 1.3;
+            display: inline-block;
+        }
+
+        .hit-title:hover {
+            text-decoration: underline;
         }
 
         .hit-author {
@@ -300,7 +306,6 @@
             });
         });
 
-        // Форматування чисел з відступами (наприклад: 582748 -> 582 748)
         function formatNumber(num) {
             if (num === undefined || num === null || num === '') return '—';
             return Number(num).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
@@ -317,11 +322,10 @@
                 const videos = data.videos || data;
 
                 videos.forEach(video => {
-                    const author = video.channel || video.author || 'Не вказано';
+                    const author = video.channel || 'Не вказано';
                     const views = formatNumber(video.views);
                     const norm = formatNumber(video.norm);
                     
-                    // Форматування відхилення (+1892%)
                     let deviation = '—';
                     if (video.percent !== undefined && video.percent !== null) {
                         deviation = `+${formatNumber(video.percent)}%`;
@@ -329,22 +333,21 @@
 
                     const speed = formatNumber(video.views_per_hour);
                     
-                    // Форматування дати як у попередньому варіанті (30 липня, 12:39 (3 дні тому))
                     let dateStr = '—';
                     if (video.time && video.relative_time) {
                         dateStr = `${video.time} (${video.relative_time})`;
                     } else if (video.time) {
                         dateStr = video.time;
-                    } else if (video.published_at) {
-                        dateStr = video.published_at;
                     }
+
+                    const videoUrl = video.url || '#';
 
                     const card = document.createElement('div');
                     card.className = 'hit-card';
                     card.innerHTML = `
                         <img src="${video.thumbnail || ''}" alt="Thumbnail" class="video-thumb">
                         <div class="hit-details">
-                            <div class="hit-title">${video.title}</div>
+                            <a href="${videoUrl}" target="_blank" class="hit-title">${video.title}</a>
                             <div class="hit-author">👤 Автор: ${author}</div>
                             <div class="hit-stats-row">
                                 <div class="stat-item">👁 Перегляди: ${views} (Норма: ${norm})</div>
