@@ -1,1 +1,34 @@
-[]
+[
+  {
+    "id": "JSSsXft2F7Q",
+    "title": "Which pickaxe will be the fastest ?",
+    "channel": "MakoShi",
+    "views": 26223,
+    "norm": 10441,
+    "percent": 151,
+    "views_per_hour": 203,
+    "score": 191,
+    "url": "https://www.youtube.com/watch?v=JSSsXft2F7Q",
+    "thumbnail": "https://img.youtube.com/vi/JSSsXft2F7Q/hqdefault.jpg",
+    "time": "16 вересня, 11:00",
+    "relative_time": "5 днів тому",
+    "published_at": "2026-09-16T11:00:14Z",
+    "telegram_message_id": 54
+  },
+  {
+    "id": "pet8zdBix-4",
+    "title": "Self-Aware Robot vs NEW Minecraft Bosses | Minecraft Mob Battle",
+    "channel": "Chicken Craft",
+    "views": 15749,
+    "norm": 6263,
+    "percent": 151,
+    "views_per_hour": 100,
+    "score": 171,
+    "url": "https://www.youtube.com/watch?v=pet8zdBix-4",
+    "thumbnail": "https://img.youtube.com/vi/pet8zdBix-4/hqdefault.jpg",
+    "time": "15 вересня, 07:30",
+    "relative_time": "6 днів тому",
+    "published_at": "2026-09-15T07:30:33Z",
+    "telegram_message_id": 53
+  }
+]
