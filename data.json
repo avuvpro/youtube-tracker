@@ -1,12 +1,28 @@
 [
   {
+    "id": "pet8zdBix-4",
+    "title": "Self-Aware Robot vs NEW Minecraft Bosses | Minecraft Mob Battle",
+    "channel": "Chicken Craft",
+    "views": 17088,
+    "norm": 6263,
+    "percent": 172,
+    "views_per_hour": 105,
+    "score": 193,
+    "url": "https://www.youtube.com/watch?v=pet8zdBix-4",
+    "thumbnail": "https://img.youtube.com/vi/pet8zdBix-4/hqdefault.jpg",
+    "time": "15 вересня, 07:30",
+    "relative_time": "6 днів тому",
+    "published_at": "2026-09-15T07:30:33Z",
+    "telegram_message_id": 53
+  },
+  {
     "id": "JSSsXft2F7Q",
     "title": "Which pickaxe will be the fastest ?",
     "channel": "MakoShi",
-    "views": 26455,
+    "views": 26493,
     "norm": 10441,
     "percent": 153,
-    "views_per_hour": 198,
+    "views_per_hour": 196,
     "score": 192,
     "url": "https://www.youtube.com/watch?v=JSSsXft2F7Q",
     "thumbnail": "https://img.youtube.com/vi/JSSsXft2F7Q/hqdefault.jpg",
@@ -14,21 +30,5 @@
     "relative_time": "5 днів тому",
     "published_at": "2026-09-16T11:00:14Z",
     "telegram_message_id": 54
-  },
-  {
-    "id": "pet8zdBix-4",
-    "title": "Self-Aware Robot vs NEW Minecraft Bosses | Minecraft Mob Battle",
-    "channel": "Chicken Craft",
-    "views": 16657,
-    "norm": 6263,
-    "percent": 165,
-    "views_per_hour": 103,
-    "score": 185,
-    "url": "https://www.youtube.com/watch?v=pet8zdBix-4",
-    "thumbnail": "https://img.youtube.com/vi/pet8zdBix-4/hqdefault.jpg",
-    "time": "15 вересня, 07:30",
-    "relative_time": "6 днів тому",
-    "published_at": "2026-09-15T07:30:33Z",
-    "telegram_message_id": 53
   }
 ]
